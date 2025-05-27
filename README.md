@@ -1,2 +1,1 @@
-# MarketingWS
-# MarketingWS
+# Content Marketing Generator Web Service
