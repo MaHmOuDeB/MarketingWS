@@ -1,0 +1,14 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+myenv/
+.env
+
+# macOS
+.DS_Store
+
+# Streamlit / generated
+.ui_snapshot/

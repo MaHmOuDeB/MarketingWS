@@ -1,0 +1,11 @@
+2025-05-26 22:52:21,114 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-05-26 22:52:21,114 INFO [33mPress CTRL+C to quit[0m
+2025-05-26 22:52:42,877 INFO 127.0.0.1 - - [26/May/2025 22:52:42] "[31m[1mPOST /generate HTTP/1.1[0m" 401 -
+2025-05-26 22:53:14,399 INFO 127.0.0.1 - - [26/May/2025 22:53:14] "[31m[1mGET /generate HTTP/1.1[0m" 405 -
+2025-05-26 22:56:32,061 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-05-26 22:56:32,061 INFO [33mPress CTRL+C to quit[0m
+2025-05-26 23:05:45,338 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-05-26 23:05:45,338 INFO [33mPress CTRL+C to quit[0m
