@@ -117,15 +117,3 @@ The app will be available at: `http://localhost:8501`
 * Use the **Feedback** section to request improvements.
 * Select a different **Language** to translate your generated content.
 * Download generated content directly from the UI.
-
----
-
-## 🤝 Contribution
-
-Feel free to submit pull requests and open issues to help improve the project.
-
----
-
-## 📜 License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
