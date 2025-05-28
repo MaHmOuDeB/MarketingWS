@@ -99,4 +99,6 @@ Run `docker compose up --build` from the project root, then access the UI at `ht
 8. View the **Latest Improvement** diff and **Download** the final text  
 9. Change **Language** at any time to translate your refined copy 
 
-his README was formatted with the assistance of AI for clarity and efficiency.
+```
+
+This README was formatted with the assistance of AI for clarity and efficiency.
