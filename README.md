@@ -1,86 +1,101 @@
-🚀 Marketing Content Generator
+# 🚀 Marketing Content Generator
 
-This project is a powerful and user-friendly web application designed to help marketing professionals and businesses quickly generate customized, high-quality marketing content across various campaign types.
+A powerful, user-friendly web application that helps marketing professionals and businesses quickly generate customized, high-quality marketing content across a variety of campaign types.
 
-🎯 Features
-	•	Generate content for different marketing campaigns:
-	•	Social Media
-	•	Email Marketing
-	•	PPC Ads
-	•	Content Marketing
-	•	Customer Retention
-	•	Seasonal Campaigns
-	•	Product Launches
-	•	Crisis Management
-	•	Supports multiple tones and languages (English, Spanish, French, German).
-	•	User feedback integration for iterative improvements.
-	•	Easy translation and content improvements directly from the UI.
+---
 
-🛠️ Tech Stack
-	•	Backend: Python, Flask, OpenAI API
-	•	Frontend: Streamlit
-	•	Containerization: Docker Compose
+## 🎯 Features
 
-🌐 Live Demo
+- **Multi-Channel Campaigns**: Social Media, Email Marketing, PPC Ads, Content Marketing, Customer Retention, Seasonal Campaigns, Product Launches, Crisis Management.  
+- **Tone & Style**: Choose from multiple writing tones (casual, professional, urgent, friendly, serious and bright).  
+- **Platform Optimization**: Social media templates tailor output for LinkedIn, Twitter, or Facebook.  
+- **Language Support**: Generate and translate content in **English**, **Spanish**, **French**, or **German**.  
+- **Interactive Feedback Loop**: Provide iterative feedback to refine copy, with clear diff view.  
+- **Easy Export**: Download final copy as a text file.  
 
-Experience the live deployed application here:
-	•	UI: https://marketing-ui-209535852921.europe-west3.run.app
-	•	API: https://marketing-api-209535852921.europe-west3.run.app/generate (for programmatic access)
+---
 
-📦 Requirements
-	•	Python 3.9+
-	•	Docker and Docker Compose (optional)
-	•	OpenAI API Key
+## 🛠️ Tech Stack
 
-🚧 Installation
-	1.	Clone the repo
+- **Backend**: Python • Flask • OpenAI API  
+- **Frontend**: Streamlit  
+- **Containerization**: Docker & Docker Compose (optional)  
 
+---
+
+## 🌐 Live Demo
+
+Try it out online:
+
+- **UI**: [https://marketing-ui-209535852921.europe-west3.run.app](https://marketing-ui-209535852921.europe-west3.run.app)  
+- **API**: `https://marketing-api-209535852921.europe-west3.run.app/generate`  
+
+---
+
+## 📦 Requirements
+
+- **Python** 3.9+  
+- **Docker** & **Docker Compose** (optional)  
+- **OpenAI API Key**  
+
+---
+
+## 🚧 Installation
+
+### 1. Clone the repository
+```bash
 git clone git@github.com:your-username/marketing-content-generator.git
 cd marketing-content-generator
 
+## 2. Configuration
 
-	2.	🔐 Configuration
-Copy the example environment file and add your OpenAI key:
+Copy the example environment file and set your OpenAI key:
 
-cp .env.example .env
+Copy `.env.example` to `.env` and then edit:
 
-Edit .env and set:
+- `OPENAI_API_KEY=your-openai-api-key`
 
-OPENAI_API_KEY=your-openai-api-key
+---
 
+## 3. Backend: Flask API
 
-	3.	💻 Backend: Flask API
+1. Change into the `app` directory  
+2. Create and activate a Python venv  
+3. Install dependencies  
+4. Run the Flask server on port 5000  
 
-cd app
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-flask run --port 5000
+After this, your API will be available at `http://localhost:5000`
 
-API is now live at: http://localhost:5000
+---
 
-	4.	🖥️ Frontend: Streamlit UI
-Open a new terminal window:
+## 4. Frontend: Streamlit UI
 
-cd ui
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-streamlit run streamlit_ui.py
+1. Change into the `ui` directory  
+2. Create and activate a Python venv  
+3. Install dependencies  
+4. Launch the Streamlit app  
 
-UI is accessible at: http://localhost:8501
+The UI will be accessible at `http://localhost:8501`
 
-🐳 Docker Compose (Alternative setup)
+---
 
-To run the app in Docker containers:
+## 5. Docker Compose (alternative)
 
-Docker compose up --build
+If you prefer containerization:
 
-The app will be available at: http://localhost:8501
+Run `docker compose up --build` from the project root, then access the UI at `http://localhost:8501`
 
-📝 Usage
-	1.	Fill out the necessary fields in the sidebar.
-	2.	Click Generate to create your content.
-	3.	Use the Feedback section to request improvements.
-	4.	Select a different Language to translate your generated content.
-	5.	Download generated content directly from the UI.
+---
+
+## 📝 Usage
+
+1. Select **Campaign Type** and **Tone**  
+2. (If Social Media) choose **Platform**  
+3. Enter your **Topic** (extended text area)  
+4. Optionally specify an **Audience**  
+5. Add any **Additional System Prompt** for custom instructions  
+6. Click **Generate** to produce initial copy  
+7. Provide **Feedback** and click **Improve** to iteratively refine  
+8. View the **Latest Improvement** diff and **Download** the final text  
+9. Change **Language** at any time to translate your refined copy 
+
