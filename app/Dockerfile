@@ -16,8 +16,8 @@ ENV PATH=/root/.local/bin:$PATH
 # Copy your application code
 COPY app.py .
 
-# Expose the Flask port
-EXPOSE 5000
+# Expose the Flask/Cloud Run port
+EXPOSE 8080
 
 # Run the API
 CMD ["python", "app.py"]
