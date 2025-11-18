@@ -27,8 +27,8 @@ A powerful, user-friendly web application that helps marketing professionals and
 
 Try it out online:
 
-- **UI**: [https://marketing-ui-209535852921.europe-west3.run.app](https://marketing-ui-209535852921.europe-west3.run.app)  
-- **API**: `https://marketing-api-209535852921.europe-west3.run.app/generate`  
+- **UI**: [https://marketing-ui-546898368122.europe-west3.run.app/](https://marketing-ui-546898368122.europe-west3.run.app/)  
+- **API**: [https://marketing-api-546898368122.europe-west3.run.app/](https://marketing-api-546898368122.europe-west3.run.app/) 
 
 ---
 
