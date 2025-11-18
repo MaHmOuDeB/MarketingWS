@@ -150,5 +150,6 @@ def generate():
         return jsonify({"error": str(e)}), 400
 
 if __name__ == '__main__':
-    # bind to 0.0.0.0 so Docker can route incoming traffic
-    app.run(host='0.0.0.0', debug=False, port=5000)
+    port = int(os.environ.get("PORT", 8080))
+    # bind to 0.0.0.0 so Docker/Cloud Run can route incoming traffic
+    app.run(host='0.0.0.0', debug=False, port=port)
