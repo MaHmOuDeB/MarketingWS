@@ -14,6 +14,8 @@ ENV PATH=/root/.local/bin:$PATH
 
 COPY streamlit_ui.py .
 
-EXPOSE 8501
+# Cloud Run will inject PORT (8080), but we set a default for local runs
+ENV PORT=8080
+EXPOSE 8080
 
-CMD ["streamlit", "run", "streamlit_ui.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["sh", "-c", "streamlit run streamlit_ui.py --server.port=$PORT --server.address=0.0.0.0"]
