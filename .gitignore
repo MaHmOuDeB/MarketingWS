@@ -1,14 +1,27 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.ruff_cache/
 
-# Virtual environments
+# Virtual environments and local installs (never commit these)
+.venv/
 venv/
+env/
 myenv/
+myvenv/
+.deps*/
+.pyshim/
+
+# Secrets
 .env
+.env.*
+!.env.example
 
-# macOS
+# OS / editors
 .DS_Store
+.idea/
+.vscode/
 
-# Streamlit / generated
-.ui_snapshot/
+# Streamlit
+.streamlit/secrets.toml

@@ -1,21 +1,15 @@
-# Stage 1: Install dependencies
-FROM python:3.9-slim as builder
+FROM python:3.12-slim
 
-WORKDIR /ui
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8501 \
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+WORKDIR /srv
 COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+COPY streamlit_app.py .
+COPY .streamlit ./.streamlit
 
-# Stage 2: Copy code + installed packages
-FROM python:3.9-slim
+RUN useradd --create-home --uid 10001 appuser
+USER appuser
 
-WORKDIR /ui
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
-
-COPY streamlit_ui.py .
-
-# Cloud Run will inject PORT (8080), but we set a default for local runs
-ENV PORT=8080
-EXPOSE 8080
-
-CMD ["sh", "-c", "streamlit run streamlit_ui.py --server.port=$PORT --server.address=0.0.0.0"]
+EXPOSE 8501
+CMD ["sh", "-c", "streamlit run streamlit_app.py --server.port=${PORT} --server.address=0.0.0.0 --server.headless=true"]

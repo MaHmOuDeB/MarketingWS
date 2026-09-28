@@ -1,0 +1,34 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check api ui tests && ruff format --check api ui tests
+      - name: Tests (offline, no OpenAI key needed)
+        run: pytest -v
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and smoke-test both containers (demo mode)
+        run: |
+          docker compose up --build -d
+          for i in $(seq 1 30); do curl -fs http://localhost:8000/health && break; sleep 2; done
+          curl -fs -X POST http://localhost:8000/generate -H 'Content-Type: application/json' \
+            -d '{"campaign_type":"social_media","platform":"LinkedIn","topic":"a budgeting app for students"}'
+          for i in $(seq 1 30); do curl -fs http://localhost:8501/_stcore/health && break; sleep 2; done
+          docker compose down
