@@ -25,6 +25,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from app import service  # noqa: E402
 from app.campaigns import CAMPAIGNS, CHAR_LIMITS  # noqa: E402
+from app.guard import unsupported_claims  # noqa: E402
 from app.llm import from_env  # noqa: E402
 
 EMOJI = re.compile("[\U0001f300-\U0001faff☀-➿]")
@@ -38,10 +39,9 @@ BASE = dict(
 
 
 def invented_figures(text: str, brief: str) -> list:
-    """Numbers in the copy that the brief never gave (placeholders like [X%] are fine)."""
-    given = set(re.findall(r"\d+(?:[.,]\d+)?", brief))
-    outside = re.sub(r"\[[^\]]*\]|<[^>]*>", " ", text)
-    return sorted({n for n in re.findall(r"\d+(?:[.,]\d+)?", outside) if n not in given})
+    """Figures and risky promises the brief never gave (placeholders like [X%] are fine) — the same
+    check the service applies before returning copy, so a failure here means it slipped through."""
+    return sorted(unsupported_claims(text, brief))
 
 
 def similarity(a: str, b: str) -> float:

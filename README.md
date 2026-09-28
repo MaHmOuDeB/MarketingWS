@@ -25,6 +25,9 @@ evaluation suite, an offline demo mode, tests and CI. See [CHANGELOG.md](CHANGEL
 - **One-click refinements** ("Shorter", "More formal", "Stronger call to action", "No hashtags" …),
   a character meter against the platform limit, copy/download, light and dark themes, keyboard shortcuts.
 - **Download** the final copy as text. Every version stays in the history.
+- **No invented facts.** Figures and promises the brief doesn't support ("70% of users", "no credit card
+  required") are turned into placeholders like `[X%]` for the marketer to fill in, checked in code rather
+  than left to the prompt. Social posts come without Markdown clutter.
 
 ## Thesis evaluation
 

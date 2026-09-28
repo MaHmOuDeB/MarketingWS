@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.4.0 — 2026-09-28 · Fact check and clean formatting
+
+Live tests showed the prompt alone doesn't stop invented facts: at any reasoning level the model wrote
+"ready in 30 minutes", "100% recyclable" and "no credit card required" for briefs that said none of it.
+
+- **Fact check in code** (`backend/app/guard.py`): before copy is returned, every figure and risky promise
+  ("no credit card", "guarantee", "money-back", "free shipping", "#1" …) is compared with the brief, the
+  user's instructions and, when refining, their feedback and draft. Anything unsupported goes back to the
+  model once with the list, to become a `[placeholder]`; figures that survive are replaced in code.
+  Clean copy costs no extra call; a figure the marketer typed into the feedback is theirs to keep.
+- **Clean formatting for social platforms:** `**bold**` and `#` headings are removed from LinkedIn, X,
+  Facebook and Instagram copy (hashtags stay); emails and blog intros keep their formatting.
+- The evaluation suite uses the same check, so a failure there means something slipped through.
+- 29 offline tests.
+
 ## 2.3.0 — 2026-09-28 · Free providers (Gemini, Groq, OpenRouter)
 
 - **Chat Completions mode** for OpenAI-compatible providers: any `OPENAI_BASE_URL` other than

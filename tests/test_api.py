@@ -348,3 +348,74 @@ def test_eval_flags_invented_figures():
     brief = "Budgetly, a budgeting app; 14-day free trial"
     assert ev.invented_figures("70% of students overspend $1,200. Try it 14 days free.", brief) == ["1,200", "70"]
     assert ev.invented_figures("[X%] of students overspend. Try it 14 days free.", brief) == []
+
+
+class Scripted:
+    """Fake model that returns the given replies in order and records every prompt."""
+
+    name = "scripted"
+
+    def __init__(self, *replies):
+        self.replies, self.prompts = list(replies), []
+
+    def complete(self, instructions, messages, max_output_tokens):
+        self.prompts.append(messages[-1]["content"])
+        return self.replies.pop(0)
+
+
+GUARD_BRIEF = dict(
+    campaign_type="social_media",
+    platform="LinkedIn",
+    tone="friendly",
+    topic="Budgetly, a budgeting app for students; 14-day free trial",
+    audience="students",
+    language="English",
+    extra_instructions=None,
+)
+
+
+def test_guard_finds_unsupported_figures_and_promises():
+    from app.guard import unsupported_claims
+
+    facts = "Budgetly, a budgeting app; 14-day free trial; saves 1,200 users"
+    text = "70% of students overspend. Join 1200 users. [X%] save more. Try 14 days free, no credit card required."
+    assert unsupported_claims(text, facts) == ["70", "no credit card"]
+    assert unsupported_claims("Try it 14 days free. <registration_link> #Budget2Go", facts) == []
+
+
+def test_invented_claims_are_sent_back_once_for_placeholders():
+    from app import service
+
+    llm = Scripted(
+        "70% of students overspend. Try Budgetly 14 days free — no credit card required.",
+        "[X%] of students overspend. Try Budgetly 14 days free.",
+    )
+    out = service.generate(llm, **GUARD_BRIEF)
+    assert out == "[X%] of students overspend. Try Budgetly 14 days free."
+    assert len(llm.prompts) == 2 and '"70"' in llm.prompts[1] and '"no credit card"' in llm.prompts[1]
+
+
+def test_figures_the_model_keeps_inventing_become_placeholders():
+    from app import service
+
+    llm = Scripted("Save $300 a term with Budgetly. 14 days free.", "Save $300 a term with Budgetly. 14 days free.")
+    assert service.generate(llm, **GUARD_BRIEF) == "Save $[X] a term with Budgetly. 14 days free."
+
+
+def test_clean_copy_costs_no_extra_call_and_feedback_figures_are_allowed():
+    from app import service
+
+    llm = Scripted("Budgetly: see every expense. 14 days free.")
+    service.generate(llm, **GUARD_BRIEF)
+    assert len(llm.prompts) == 1
+    llm = Scripted("Budgetly: 20% off this week. 14 days free.")
+    service.refine(llm, **GUARD_BRIEF, draft="Budgetly. 14 days free.", feedback="mention 20% off this week")
+    assert len(llm.prompts) == 1  # the marketer gave the figure, so it is not "invented"
+
+
+def test_markdown_is_removed_for_social_platforms_only():
+    from app.guard import strip_markdown
+
+    text = "## Launch\n**20 recipes** a week. #MealKit"
+    assert strip_markdown(text, "LinkedIn") == "Launch\n20 recipes a week. #MealKit"
+    assert strip_markdown(text, None) == text

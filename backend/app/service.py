@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from .campaigns import CAMPAIGNS, build_brief, char_limit, trim_to_limit
+from .guard import replace_numbers, strip_markdown, unsupported_claims
 from .llm import LLM, Message
 
 SYSTEM = (
@@ -47,7 +48,8 @@ def generate(
         [{"role": "user", "content": brief}],
         CAMPAIGNS[campaign_type].max_output_tokens,
     )
-    return _fit(llm, text, platform, language, campaign_type)
+    text = _checked(llm, text, f"{brief}\n{extra_instructions or ''}", language, campaign_type)
+    return _fit(llm, strip_markdown(text, platform), platform, language, campaign_type)
 
 
 ANGLES = (
@@ -82,7 +84,10 @@ def variants(
             [{"role": "user", "content": f"{brief}\nAngle: {how}"}],
             CAMPAIGNS[campaign_type].max_output_tokens,
         )
-        out.append({"angle": name, "content": _fit(llm, text, platform, language, campaign_type)})
+        text = _checked(llm, text, f"{brief}\n{extra_instructions or ''}", language, campaign_type)
+        out.append(
+            {"angle": name, "content": _fit(llm, strip_markdown(text, platform), platform, language, campaign_type)}
+        )
     return out
 
 
@@ -117,7 +122,10 @@ def refine(
     text = llm.complete(
         system_prompt(language, extra_instructions), messages, CAMPAIGNS[campaign_type].max_output_tokens
     )
-    return _fit(llm, text, platform, language, campaign_type)
+    # the draft and the feedback count as facts: a figure the marketer typed in is theirs to keep
+    facts = f"{brief}\n{extra_instructions or ''}\n{draft}\n{feedback}"
+    text = _checked(llm, text, facts, language, campaign_type)
+    return _fit(llm, strip_markdown(text, platform), platform, language, campaign_type)
 
 
 def translate(llm: LLM, *, text: str, language: str, platform: Optional[str] = None) -> str:
@@ -129,7 +137,29 @@ def translate(llm: LLM, *, text: str, language: str, platform: Optional[str] = N
     )
     prompt = f"Translate this marketing copy into {language}.{_limit_note(platform)}\n\n{text}"
     out = llm.complete(instructions, [{"role": "user", "content": prompt}], max(200, len(text) // 2))
-    return trim_to_limit(out, char_limit(platform))
+    return trim_to_limit(strip_markdown(out, platform), char_limit(platform))
+
+
+def _checked(llm: LLM, text: str, facts: str, language: str, campaign_type: str) -> str:
+    """Keep only claims the brief supports: one revision that swaps unsupported figures and promises
+    for placeholders, then — if figures remain — replace them in code."""
+    claims = unsupported_claims(text, facts)
+    if not claims:
+        return text
+    listed = ", ".join(f'"{c}"' for c in claims)
+    text = llm.complete(
+        system_prompt(language, None),
+        [
+            {
+                "role": "user",
+                "content": f"This copy states things the brief does not support: {listed}. Replace each "
+                "figure with a placeholder in square brackets (such as [X%] or [number]) and remove each "
+                "unsupported promise. Change nothing else. Return only the copy.\n\n" + text,
+            }
+        ],
+        CAMPAIGNS[campaign_type].max_output_tokens,
+    )
+    return replace_numbers(text, facts) if unsupported_claims(text, facts) else text
 
 
 def _fit(llm: LLM, text: str, platform: Optional[str], language: str, campaign_type: str) -> str:
