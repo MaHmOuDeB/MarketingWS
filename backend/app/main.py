@@ -147,6 +147,11 @@ def _failure_message(e: Exception) -> str:
     reason = _FAILURES.get(status) if isinstance(status, int) else None
     if reason is None and isinstance(status, int) and status >= 500:
         reason = "the model provider is having problems"
+    # which request field the provider objected to (a field name, never the provider's free text)
+    body = getattr(e, "body", None)
+    param = body.get("param") if isinstance(body, dict) else None
+    if isinstance(param, str) and param.replace("_", "").isalnum() and len(param) <= 40:
+        reason = f"{reason}; the provider objected to '{param}'" if reason else None
     if reason:
         return f"The language model could not produce copy ({status}: {reason})."
     return "The language model could not produce copy right now. Please retry."

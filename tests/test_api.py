@@ -309,3 +309,21 @@ def test_reasoning_effort_is_passed_only_when_set(monkeypatch):
     monkeypatch.setenv("OPENAI_REASONING_EFFORT", "low")
     llm.complete("sys", [{"role": "user", "content": "brief"}], 180)
     assert "reasoning_effort" not in sent[0] and sent[1]["reasoning_effort"] == "low"
+
+
+def test_a_rejected_request_names_the_field(client):
+    class BadRequest(Exception):
+        status_code = 400
+        body = {"message": "echo of user input", "type": "invalid_request_error", "param": "reasoning_effort"}
+
+    class Failing:
+        name = "compat:openai/gpt-oss-120b"
+
+        def complete(self, *a, **k):
+            raise BadRequest("bad")
+
+    main._llm = Failing()
+    main._hits.clear()
+    detail = client.post("/generate", json=BRIEF).json()["detail"]
+    assert "400" in detail and "'reasoning_effort'" in detail and "echo of user input" not in detail
+    main._llm = DemoLLM()
