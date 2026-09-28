@@ -7,7 +7,10 @@
   claim the brief doesn't support; flagged claims go into the same single revision as the code check.
   One review call covers all three A/B variants, clean texts cost no revision, a failed review never fails
   the request, and `FACT_REVIEW=off` turns it off.
-- 32 offline tests.
+- A revision may not lose a true fact: it gets the brief with an instruction to keep its facts and
+  numbers, and if a figure from the brief still disappears (a live test turned "20 recipes" into
+  "[number] recipes"), the revision is discarded and only invented figures are replaced in code.
+- 33 offline tests.
 
 ## 2.4.0 — 2026-09-28 · Fact check and clean formatting
 

@@ -475,3 +475,16 @@ def test_review_can_be_switched_off_and_never_breaks_a_request(monkeypatch):
             return super().complete(instructions, messages, max_output_tokens)
 
     assert service.generate(ReviewFails("Budgetly. 14 days free."), **GUARD_BRIEF) == "Budgetly. 14 days free."
+
+
+def test_a_revision_that_drops_a_true_fact_is_discarded():
+    from app import service
+
+    llm = Scripted(
+        "Budgetly syncs with your bank. Save 30% more. 14 days free.",
+        "Budgetly helps you save [X%] more. [X] days free.",  # lost the brief's 14
+        review="1: syncs with your bank",
+    )
+    out = service.generate(llm, **GUARD_BRIEF)
+    assert "14 days free" in out and "30%" not in out and "[X]%" in out
+    assert "BRIEF:" in llm.prompts[1] and "including its numbers" in llm.prompts[1]

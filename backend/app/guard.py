@@ -54,6 +54,15 @@ def unsupported_claims(text: str, facts: str) -> List[str]:
     return found
 
 
+def lost_facts(before: str, after: str, facts: str) -> List[str]:
+    """Figures from the brief that were in `before` but are missing from `after` (a revision that
+    swapped a true fact for a placeholder)."""
+    given = {_digits(n) for n in NUMBER.findall(facts)}
+    kept = {_digits(n) for n in NUMBER.findall(PLACEHOLDER.sub(" ", after))}
+    had = [n for n in NUMBER.findall(PLACEHOLDER.sub(" ", before)) if _digits(n) in given]
+    return [n for n in dict.fromkeys(had) if _digits(n) not in kept]
+
+
 def replace_numbers(text: str, facts: str) -> str:
     """Last resort: turn each unsupported figure into a placeholder the marketer fills in."""
     given = {_digits(n) for n in NUMBER.findall(facts)}

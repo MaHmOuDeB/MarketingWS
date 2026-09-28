@@ -7,7 +7,7 @@ import re
 from typing import List, Optional
 
 from .campaigns import CAMPAIGNS, build_brief, char_limit, trim_to_limit
-from .guard import replace_numbers, strip_markdown, unsupported_claims
+from .guard import lost_facts, replace_numbers, strip_markdown, unsupported_claims
 from .llm import LLM, Message
 
 SYSTEM = (
@@ -190,20 +190,25 @@ def _checked(
     if not claims:
         return text
     listed = ", ".join(f'"{c}"' for c in claims)
-    text = llm.complete(
+    revised = llm.complete(
         system_prompt(language, None),
         [
             {
                 "role": "user",
-                "content": f"This copy states things the brief does not support: {listed}. Replace each "
-                "figure with a placeholder in square brackets (such as [X%] or [number]), and remove or "
-                "make generic each unsupported feature or promise. Change nothing else. Return only the "
-                "copy.\n\n" + text,
+                "content": f"BRIEF:\n{facts}\n\nThe copy below states things the brief does not support: "
+                f"{listed}. Fix only those: replace an unsupported figure with a placeholder in square "
+                "brackets (such as [X%]) and remove or make generic an unsupported feature or promise. Keep "
+                "everything the brief states exactly as it is, including its numbers. Change nothing else. "
+                "Return only the copy.\n\nCOPY:\n" + text,
             }
         ],
         CAMPAIGNS[campaign_type].max_output_tokens,
     )
-    return replace_numbers(text, facts) if unsupported_claims(text, facts) else text
+    # a revision must not lose a true fact: if a figure from the brief disappeared, keep the original
+    # and only replace its unsupported figures in code
+    if lost_facts(text, revised, facts):
+        return replace_numbers(text, facts)
+    return replace_numbers(revised, facts) if unsupported_claims(revised, facts) else revised
 
 
 def _fit(llm: LLM, text: str, platform: Optional[str], language: str, campaign_type: str) -> str:
