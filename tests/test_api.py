@@ -85,7 +85,8 @@ def test_validation_errors_are_clear(client):
     assert ok.status_code == 200
 
 
-def test_channel_limit_is_enforced_at_a_word_boundary():
+def test_channel_limit_is_enforced_at_a_word_boundary(monkeypatch):
+    monkeypatch.setenv("FACT_REVIEW", "off")  # this test counts the shorten call only
     fake = Recorder("word " * 200)
     out = service.generate(fake, **{**BRIEF, "platform": "X (Twitter)"}, extra_instructions=None)
     assert len(out) <= 280 and out.endswith("…") and not out.endswith(" …")
@@ -351,14 +352,18 @@ def test_eval_flags_invented_figures():
 
 
 class Scripted:
-    """Fake model that returns the given replies in order and records every prompt."""
+    """Fake model that returns the given replies in order and records every prompt. Fact-review
+    calls are answered separately (default: nothing found) and recorded in `reviews`."""
 
     name = "scripted"
 
-    def __init__(self, *replies):
-        self.replies, self.prompts = list(replies), []
+    def __init__(self, *replies, review="NONE"):
+        self.replies, self.prompts, self.review, self.reviews = list(replies), [], review, []
 
     def complete(self, instructions, messages, max_output_tokens):
+        if instructions.startswith("You check marketing copy"):
+            self.reviews.append(messages[-1]["content"])
+            return self.review
         self.prompts.append(messages[-1]["content"])
         return self.replies.pop(0)
 
@@ -419,3 +424,54 @@ def test_markdown_is_removed_for_social_platforms_only():
     text = "## Launch\n**20 recipes** a week. #MealKit"
     assert strip_markdown(text, "LinkedIn") == "Launch\n20 recipes a week. #MealKit"
     assert strip_markdown(text, None) == text
+
+
+def test_review_catches_invented_features_in_plain_words():
+    from app import service
+
+    llm = Scripted(
+        "Budgetly syncs with your bank and sends smart alerts. 14 days free.",
+        "Budgetly shows where your money goes. 14 days free.",
+        review="1: syncs with your bank | sends smart alerts",
+    )
+    out = service.generate(llm, **GUARD_BRIEF)
+    assert out == "Budgetly shows where your money goes. 14 days free."
+    assert '"syncs with your bank"' in llm.prompts[1] and '"sends smart alerts"' in llm.prompts[1]
+    assert "BRIEF:" in llm.reviews[0] and "Budgetly, a budgeting app for students" in llm.reviews[0]
+
+
+def test_variants_are_reviewed_in_one_call_and_only_flagged_ones_revised():
+    from app import service
+
+    llm = Scripted(
+        "A: see every expense. 14 days free.",
+        "B: bank sync included. 14 days free.",
+        "C: [X%] of students overspend. 14 days free.",
+        "B: see where your money goes. 14 days free.",
+        review="1: NONE\n2: bank sync included\n3: NONE",
+    )
+    out = service.variants(llm, count=3, **GUARD_BRIEF)
+    assert len(llm.reviews) == 1 and "TEXT 3:" in llm.reviews[0]
+    assert [v["content"] for v in out] == [
+        "A: see every expense. 14 days free.",
+        "B: see where your money goes. 14 days free.",
+        "C: [X%] of students overspend. 14 days free.",
+    ]
+
+
+def test_review_can_be_switched_off_and_never_breaks_a_request(monkeypatch):
+    from app import service
+
+    monkeypatch.setenv("FACT_REVIEW", "off")
+    llm = Scripted("Budgetly: see every expense. 14 days free.")
+    service.generate(llm, **GUARD_BRIEF)
+    assert llm.reviews == []
+    monkeypatch.setenv("FACT_REVIEW", "on")
+
+    class ReviewFails(Scripted):
+        def complete(self, instructions, messages, max_output_tokens):
+            if instructions.startswith("You check marketing copy"):
+                raise RuntimeError("rate limited")
+            return super().complete(instructions, messages, max_output_tokens)
+
+    assert service.generate(ReviewFails("Budgetly. 14 days free."), **GUARD_BRIEF) == "Budgetly. 14 days free."

@@ -141,6 +141,8 @@ class DemoLLM:
 
     def complete(self, instructions: str, messages: List[Message], max_output_tokens: int) -> str:
         last = messages[-1]["content"]
+        if instructions.startswith("You check marketing copy"):  # fact review: demo copy invents nothing
+            return "NONE"
         if last.startswith("Translate"):
             lang = re.search(r"into (\w+)", last)
             draft = last.split("\n\n", 1)[-1]

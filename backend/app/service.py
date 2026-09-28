@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import re
 from typing import List, Optional
 
 from .campaigns import CAMPAIGNS, build_brief, char_limit, trim_to_limit
@@ -48,7 +50,8 @@ def generate(
         [{"role": "user", "content": brief}],
         CAMPAIGNS[campaign_type].max_output_tokens,
     )
-    text = _checked(llm, text, f"{brief}\n{extra_instructions or ''}", language, campaign_type)
+    facts = f"{brief}\n{extra_instructions or ''}"
+    text = _checked(llm, text, facts, language, campaign_type, _review(llm, [text], facts)[0])
     return _fit(llm, strip_markdown(text, platform), platform, language, campaign_type)
 
 
@@ -77,14 +80,20 @@ def variants(
     """A/B test variants: the same brief written from clearly different angles, so a test can tell
     which approach works — not three near-identical rewrites."""
     brief = build_brief(campaign_type, tone, topic, audience, platform) + _limit_note(platform)
-    out = []
-    for name, how in ANGLES[: max(1, min(count, len(ANGLES)))]:
-        text = llm.complete(
+    angles = ANGLES[: max(1, min(count, len(ANGLES)))]
+    texts = [
+        llm.complete(
             system_prompt(language, extra_instructions),
             [{"role": "user", "content": f"{brief}\nAngle: {how}"}],
             CAMPAIGNS[campaign_type].max_output_tokens,
         )
-        text = _checked(llm, text, f"{brief}\n{extra_instructions or ''}", language, campaign_type)
+        for _, how in angles
+    ]
+    facts = f"{brief}\n{extra_instructions or ''}"
+    reviews = _review(llm, texts, facts)  # one call for all variants
+    out = []
+    for (name, _), text, found in zip(angles, texts, reviews):
+        text = _checked(llm, text, facts, language, campaign_type, found)
         out.append(
             {"angle": name, "content": _fit(llm, strip_markdown(text, platform), platform, language, campaign_type)}
         )
@@ -124,7 +133,7 @@ def refine(
     )
     # the draft and the feedback count as facts: a figure the marketer typed in is theirs to keep
     facts = f"{brief}\n{extra_instructions or ''}\n{draft}\n{feedback}"
-    text = _checked(llm, text, facts, language, campaign_type)
+    text = _checked(llm, text, facts, language, campaign_type, _review(llm, [text], facts)[0])
     return _fit(llm, strip_markdown(text, platform), platform, language, campaign_type)
 
 
@@ -140,10 +149,44 @@ def translate(llm: LLM, *, text: str, language: str, platform: Optional[str] = N
     return trim_to_limit(strip_markdown(out, platform), char_limit(platform))
 
 
-def _checked(llm: LLM, text: str, facts: str, language: str, campaign_type: str) -> str:
-    """Keep only claims the brief supports: one revision that swaps unsupported figures and promises
-    for placeholders, then — if figures remain — replace them in code."""
-    claims = unsupported_claims(text, facts)
+REVIEW = (
+    "You check marketing copy against its brief before it is published. For each text, list the "
+    "concrete claims it makes that the brief does not state or clearly imply: product features, "
+    'specific benefits, offers, numbers, awards, comparisons. Persuasive but generic wording ("take '
+    'control of your finances") is fine, and so are placeholders in [brackets]. Answer with exactly '
+    'one line per text, quoting the copy\'s own words: "<n>: NONE" or "<n>: claim | claim". '
+    "No other text."
+)
+
+
+def _review(llm: LLM, texts: List[str], facts: str) -> List[List[str]]:
+    """A short model review that finds invented claims the pattern check can't see (a feature named
+    in plain words). One call covers every text; FACT_REVIEW=off skips it."""
+    if os.getenv("FACT_REVIEW", "on").strip().lower() in ("off", "0", "false", "no"):
+        return [[] for _ in texts]
+    numbered = "\n\n".join(f"TEXT {i}:\n{t}" for i, t in enumerate(texts, 1))
+    try:
+        reply = llm.complete(
+            REVIEW, [{"role": "user", "content": f"BRIEF:\n{facts}\n\n{numbered}"}], 120 + 60 * len(texts)
+        )
+    except Exception:  # the review is a safeguard, never a reason to fail the request
+        return [[] for _ in texts]
+    found: List[List[str]] = [[] for _ in texts]
+    for line in reply.splitlines():
+        m = re.match(r"\s*(?:TEXT\s*)?(\d+)\s*[:.)-]\s*(.+)", line, re.I)
+        if m and 1 <= int(m.group(1)) <= len(texts) and m.group(2).strip().upper().rstrip(".") != "NONE":
+            claims = [c.strip(" \"'“”") for c in m.group(2).split("|")]
+            found[int(m.group(1)) - 1] = [c for c in claims if 2 < len(c) < 120][:6]
+    return found
+
+
+def _checked(
+    llm: LLM, text: str, facts: str, language: str, campaign_type: str, reviewed: Optional[List[str]] = None
+) -> str:
+    """Keep only claims the brief supports: one revision that swaps unsupported figures, promises and
+    features (from the pattern check and the review) for placeholders or removes them, then — if
+    figures remain — replace them in code."""
+    claims = list(dict.fromkeys(unsupported_claims(text, facts) + list(reviewed or [])))
     if not claims:
         return text
     listed = ", ".join(f'"{c}"' for c in claims)
@@ -153,8 +196,9 @@ def _checked(llm: LLM, text: str, facts: str, language: str, campaign_type: str)
             {
                 "role": "user",
                 "content": f"This copy states things the brief does not support: {listed}. Replace each "
-                "figure with a placeholder in square brackets (such as [X%] or [number]) and remove each "
-                "unsupported promise. Change nothing else. Return only the copy.\n\n" + text,
+                "figure with a placeholder in square brackets (such as [X%] or [number]), and remove or "
+                "make generic each unsupported feature or promise. Change nothing else. Return only the "
+                "copy.\n\n" + text,
             }
         ],
         CAMPAIGNS[campaign_type].max_output_tokens,

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.5.0 — 2026-09-28 · Fact review
+
+- **Fact review:** the code check catches figures and fixed phrases, but not a feature invented in plain
+  words ("flexible plans: pause, skip or adjust deliveries"). A short review call now lists every concrete
+  claim the brief doesn't support; flagged claims go into the same single revision as the code check.
+  One review call covers all three A/B variants, clean texts cost no revision, a failed review never fails
+  the request, and `FACT_REVIEW=off` turns it off.
+- 32 offline tests.
+
 ## 2.4.0 — 2026-09-28 · Fact check and clean formatting
 
 Live tests showed the prompt alone doesn't stop invented facts: at any reasoning level the model wrote

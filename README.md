@@ -27,7 +27,8 @@ evaluation suite, an offline demo mode, tests and CI. See [CHANGELOG.md](CHANGEL
 - **Download** the final copy as text. Every version stays in the history.
 - **No invented facts.** Figures and promises the brief doesn't support ("70% of users", "no credit card
   required") are turned into placeholders like `[X%]` for the marketer to fill in, checked in code rather
-  than left to the prompt. Social posts come without Markdown clutter.
+  than left to the prompt; a short review call also catches features invented in plain words ("syncs
+  with your bank") and has them removed. Social posts come without Markdown clutter.
 
 ## Thesis evaluation
 
@@ -141,6 +142,7 @@ Interactive documentation with request examples: `/docs`.
 | `ANTHROPIC_API_KEY` | — | Enables generation with Claude |
 | `ANTHROPIC_MODEL` | `claude-haiku-4-5` | Any current Claude model id (`claude-sonnet-5` for higher quality) |
 | — | | Without either key the service runs in demo mode |
+| `FACT_REVIEW` | `on` | A short model review of each text against the brief (one call covers all A/B variants); `off` saves quota |
 | `APP_API_KEY` | — | If set, requests must send `X-API-Key` (the UI sends it server-side) |
 | `RATE_LIMIT_PER_MIN` | `20` | Requests per client IP per minute |
 | `CORS_ORIGINS` | — | Browser origins allowed to call the API directly |
