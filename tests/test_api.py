@@ -270,3 +270,21 @@ def test_chat_retries_with_room_to_think_when_output_is_empty(monkeypatch):
     llm.client, sent = _fake_chat(["", "Copy after thinking."])
     assert llm.complete("sys", [{"role": "user", "content": "brief"}], 180) == "Copy after thinking."
     assert [s["max_tokens"] for s in sent] == [180, 2048]
+
+
+def test_model_failure_says_why_without_leaking_the_provider_message(client):
+    class QuotaError(Exception):
+        status_code = 429
+
+    class Failing:
+        name = "compat:gemini-2.5-flash"
+
+        def complete(self, *a, **k):
+            raise QuotaError("quota exceeded for key sk-secret-123")
+
+    main._llm = Failing()
+    main._hits.clear()
+    r = client.post("/generate", json=BRIEF)
+    assert r.status_code == 502 and "429" in r.json()["detail"] and "quota" in r.json()["detail"]
+    assert "sk-secret" not in r.text
+    main._llm = DemoLLM()

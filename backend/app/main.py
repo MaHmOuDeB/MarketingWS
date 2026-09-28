@@ -129,7 +129,27 @@ def _call(fn, **kwargs):
         raise HTTPException(422, str(e)) from e
     except Exception as e:  # upstream/model failure: log it, don't leak it
         log.exception("LLM call failed")
-        raise HTTPException(502, "The language model could not produce copy right now. Please retry.") from e
+        raise HTTPException(502, _failure_message(e)) from e
+
+
+# the provider's HTTP status says what went wrong without exposing its message (which may echo input)
+_FAILURES = {
+    400: "the provider rejected the request — check the API key and model name",
+    401: "the API key was rejected — check it in the deployment settings",
+    403: "the API key has no access to this model or region",
+    404: "the model was not found — check the model name",
+    429: "the provider's rate limit or free quota is used up — try again later",
+}
+
+
+def _failure_message(e: Exception) -> str:
+    status = getattr(e, "status_code", None)
+    reason = _FAILURES.get(status) if isinstance(status, int) else None
+    if reason is None and isinstance(status, int) and status >= 500:
+        reason = "the model provider is having problems"
+    if reason:
+        return f"The language model could not produce copy ({status}: {reason})."
+    return "The language model could not produce copy right now. Please retry."
 
 
 def _run(fn, **kwargs) -> Copy:
