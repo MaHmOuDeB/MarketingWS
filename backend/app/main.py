@@ -6,6 +6,7 @@ Endpoints
   POST /generate     first draft from a brief
   POST /refine       revise the current draft with feedback
   POST /translate    translate the current draft
+  POST /variants     2–3 A/B test variants of the brief, each from a different angle
 Interactive docs at /docs (OpenAPI).
 
 Protection for a public deployment (all configurable, see .env.example):
@@ -21,14 +22,14 @@ import logging
 import os
 import time
 from collections import defaultdict, deque
-from typing import Deque, Dict, Optional
+from typing import Deque, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from . import service
-from .campaigns import CAMPAIGNS, LANGUAGES, TONES
+from .campaigns import CAMPAIGNS, CHAR_LIMITS, LANGUAGES, TONES
 from .llm import LLM, from_env
 
 log = logging.getLogger("marketing-api")
@@ -101,20 +102,39 @@ class TranslateRequest(BaseModel):
     platform: Optional[str] = Field(None, max_length=40)
 
 
+class VariantsRequest(Brief):
+    count: int = Field(3, ge=2, le=3, description="How many A/B variants (2–3), each from a different angle")
+
+
 class Copy(BaseModel):
     content: str
     backend: str
 
 
-def _run(fn, **kwargs) -> Copy:
+class Variant(BaseModel):
+    angle: str
+    content: str
+
+
+class Variants(BaseModel):
+    variants: List[Variant]
+    backend: str
+
+
+def _call(fn, **kwargs):
     llm = get_llm()
     try:
-        return Copy(content=fn(llm, **kwargs), backend=llm.name)
+        return fn(llm, **kwargs), llm.name
     except ValueError as e:  # invalid campaign/platform combination
         raise HTTPException(422, str(e)) from e
     except Exception as e:  # upstream/model failure: log it, don't leak it
         log.exception("LLM call failed")
         raise HTTPException(502, "The language model could not produce copy right now. Please retry.") from e
+
+
+def _run(fn, **kwargs) -> Copy:
+    content, backend = _call(fn, **kwargs)
+    return Copy(content=content, backend=backend)
 
 
 # ─── routes ───────────────────────────────────────────────────────────────────
@@ -129,12 +149,19 @@ def options() -> dict:
         "campaigns": {k: {"label": c.label, "platforms": list(c.platforms)} for k, c in CAMPAIGNS.items()},
         "tones": list(TONES),
         "languages": list(LANGUAGES),
+        "char_limits": CHAR_LIMITS,
     }
 
 
 @app.post("/generate", response_model=Copy, dependencies=[Depends(guard)])
 def generate(req: Brief) -> Copy:
     return _run(service.generate, **req.model_dump())
+
+
+@app.post("/variants", response_model=Variants, dependencies=[Depends(guard)])
+def make_variants(req: VariantsRequest) -> Variants:
+    items, backend = _call(service.variants, **req.model_dump())
+    return Variants(variants=[Variant(**v) for v in items], backend=backend)
 
 
 @app.post("/refine", response_model=Copy, dependencies=[Depends(guard)])

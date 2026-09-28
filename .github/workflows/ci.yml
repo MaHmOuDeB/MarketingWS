@@ -16,7 +16,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: pip install -r requirements-dev.txt
       - name: Lint
-        run: ruff check api ui tests && ruff format --check api ui tests
+        run: ruff check backend ui tests server.py && ruff format --check backend ui tests server.py
       - name: Tests (offline, no OpenAI key needed)
         run: pytest -v
 

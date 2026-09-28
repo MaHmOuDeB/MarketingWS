@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marketing Content Generator</title>
+<meta name="description" content="Draft, refine and translate marketing copy with AI. Master's thesis project, modernised 2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f5f7; --surface: #ffffff; --surface-2: #f8f9fb; --line: #e2e5ea;
+  --text: #15181d; --muted: #5a6270; --faint: #8a919c;
+  --accent: #0e6f68; --accent-ink: #ffffff; --accent-soft: #e3f2f0;
+  --add: #0f7a3d; --add-bg: #e4f5ea; --del: #b42318; --del-bg: #fdecea;
+  --warn-bg: #fff6e0; --warn-ink: #7a5200;
+  --radius: 12px; --shadow: 0 1px 2px rgba(16,24,40,.05), 0 8px 24px -12px rgba(16,24,40,.12);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1014; --surface: #161a20; --surface-2: #1b2028; --line: #2a303a;
+    --text: #e9ecf1; --muted: #a3abb8; --faint: #6f7785;
+    --accent: #3cc4b4; --accent-ink: #062b28; --accent-soft: #11302d;
+    --add: #5fd38f; --add-bg: #12301f; --del: #ff8a80; --del-bg: #3a1714;
+    --warn-bg: #2e2510; --warn-ink: #f1c76b;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1014; --surface: #161a20; --surface-2: #1b2028; --line: #2a303a;
+  --text: #e9ecf1; --muted: #a3abb8; --faint: #6f7785;
+  --accent: #3cc4b4; --accent-ink: #062b28; --accent-soft: #11302d;
+  --add: #5fd38f; --add-bg: #12301f; --del: #ff8a80; --del-bg: #3a1714;
+  --warn-bg: #2e2510; --warn-ink: #f1c76b;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 15px/1.55 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding-inline: 16px; padding-block: 28px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 24px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+h1 {
+  font: 700 clamp(26px, 3.4vw, 38px)/1.1 "Bricolage Grotesque", system-ui, sans-serif;
+  letter-spacing: -0.02em; margin: 0; text-wrap: balance;
+}
+.lede { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+.meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.pill {
+  font: 500 12px/1 "IBM Plex Mono", ui-monospace, monospace; letter-spacing: .02em;
+  padding: 7px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); background: var(--surface);
+}
+.pill.live { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+a { color: var(--accent); }
+.layout { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 24px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.brief { padding: 20px; display: grid; gap: 14px; position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); }
+@media (max-width: 860px) { .brief { position: static; } }
+h2 { font: 600 17px/1.3 "Bricolage Grotesque", system-ui, sans-serif; margin: 0; letter-spacing: -0.01em; }
+label { display: grid; gap: 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+select, textarea, input {
+  width: 100%; font: inherit; color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px;
+}
+textarea { resize: vertical; min-height: 44px; }
+select:focus, textarea:focus, input:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button {
+  font: 600 14px/1 "IBM Plex Sans", system-ui, sans-serif; border-radius: 9px; padding: 11px 14px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer;
+}
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.ghost { background: transparent; }
+.work { display: grid; gap: 18px; min-width: 0; }
+.draft { padding: 20px; display: grid; gap: 14px; }
+.draft-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.copy {
+  white-space: pre-wrap; overflow-wrap: anywhere; font-size: 16px; line-height: 1.65;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; min-height: 120px;
+}
+.copy.empty { color: var(--faint); display: grid; place-items: center; text-align: center; }
+.meter { display: flex; align-items: center; gap: 10px; font: 400 12px/1 "IBM Plex Mono", ui-monospace, monospace; color: var(--muted); }
+.bar { flex: 1; height: 5px; border-radius: 99px; background: var(--line); overflow: hidden; max-width: 220px; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); }
+.bar.over > i { background: var(--del); }
+.split { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; }
+@media (max-width: 1040px) { .split { grid-template-columns: 1fr; } }
+.panel { padding: 18px 20px; display: grid; gap: 12px; align-content: start; }
+.inline { display: flex; gap: 8px; }
+.inline select { flex: 1; }
+.notice { border-radius: 10px; padding: 10px 14px; font-size: 14px; }
+.notice.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.notice.err { background: var(--del-bg); color: var(--del); }
+.diff { line-height: 1.8; font-size: 15px; }
+.diff del { color: var(--del); background: var(--del-bg); text-decoration: line-through; border-radius: 3px; padding: 0 2px; }
+.diff ins { color: var(--add); background: var(--add-bg); text-decoration: none; font-weight: 600; border-radius: 3px; padding: 0 2px; }
+.versions { display: grid; gap: 10px; }
+.version { border-left: 3px solid var(--line); padding: 2px 0 2px 12px; }
+.version.current { border-color: var(--accent); }
+.version b { font-size: 13px; }
+.version p { margin: 4px 0 0; color: var(--muted); white-space: pre-wrap; font-size: 14px; }
+.small { font-size: 13px; color: var(--muted); }
+footer { color: var(--faint); font-size: 13px; }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; animation: s .7s linear infinite; vertical-align: -1px; margin-right: 6px; }
+@keyframes s { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+.btns { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 12.5px/1 "IBM Plex Sans", system-ui, sans-serif; padding: 8px 11px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent); border: 1px solid transparent; }
+.chip:hover:not(:disabled) { border-color: var(--accent); }
+.variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.variant { border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: var(--surface-2); }
+.variant button { margin-top: auto; }
+.variant .tag { font: 500 11px/1 "IBM Plex Mono", ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.variant p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14.5px; }
+button { transition: transform .12s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease; }
+button:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+button.primary:hover:not(:disabled) { box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--accent) 70%, transparent); }
+button:active:not(:disabled) { transform: translateY(1px) scale(.99); }
+.bar > i { transition: width .35s ease, background-color .2s ease; }
+.enter { animation: rise .35s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.copy.loading { color: transparent; display: grid; gap: 10px; align-content: start; }
+.copy.loading::before, .copy.loading::after, .copy.loading span { content: ""; }
+.sk { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--line) 0%, var(--surface) 40%, var(--line) 80%);
+  background-size: 300% 100%; animation: shimmer 1.2s linear infinite; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.toasts { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; z-index: 10; }
+.toast { background: var(--text); color: var(--bg); font-size: 14px; padding: 10px 14px; border-radius: 10px;
+  box-shadow: var(--shadow); animation: rise .25s ease both; }
+.toast.err { background: var(--del); color: #fff; }
+kbd { font: 500 11px/1 "IBM Plex Mono", ui-monospace, monospace; padding: 3px 5px; border-radius: 5px;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); }
+.hint { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--faint); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); display: inline-block; margin-right: 6px; vertical-align: 1px; }
+.pill.live .dot { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+#theme { padding: 6px 10px; font: 500 12px/1 "IBM Plex Mono", ui-monospace, monospace; border-radius: 999px; }
+@media (prefers-reduced-motion: reduce) { .enter, .toast, .sk { animation: none; } button, .bar > i { transition: none; } }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Marketing Content Generator</h1>
+      <p class="lede">Draft copy from a brief, refine it with feedback, translate it. Built for my Master's thesis in Data Science and evaluated with nine marketers (usability 83/100).</p>
+    </div>
+    <div class="meta">
+      <span class="pill" id="backend"><span class="dot"></span><span id="backend-label">connecting…</span></span>
+      <button type="button" id="theme" title="Switch theme">theme: auto</button>
+      <a class="pill" href="/api/docs">API docs</a>
+      <a class="pill" href="https://github.com/MaHmOuDeB/MarketingWS">Source</a>
+    </div>
+  </header>
+
+  <div id="banner" class="notice warn" hidden>Demo mode: no OpenAI key is configured on this deployment, so the copy below is a placeholder. The workflow is real; the text is not.</div>
+
+  <div class="layout">
+    <form class="card brief" id="brief" autocomplete="off">
+      <h2>Brief</h2>
+      <label>Campaign type <select id="campaign_type"></select></label>
+      <label id="platform-wrap">Platform <select id="platform"></select></label>
+      <div class="row">
+        <label>Tone <select id="tone"></select></label>
+        <label>Language <select id="language"></select></label>
+      </div>
+      <label>Topic <textarea id="topic" rows="4" required minlength="3" maxlength="1500" placeholder="What is it about? Offer, product, key facts…"></textarea></label>
+      <label>Audience <input id="audience" maxlength="300" placeholder="e.g. university students in Berlin"></label>
+      <label>Extra instructions <textarea id="extra" rows="2" maxlength="1000" placeholder="e.g. mention the 14-day free trial; no emojis"></textarea></label>
+      <div class="btns"><button class="primary" id="generate" type="submit">Generate draft</button><button id="variants-btn" type="button" title="Three versions from different angles, for an A/B test">A/B variants</button></div>
+      <div class="hint"><span>Remembers your last brief</span><span><kbd>⌘</kbd> <kbd>↵</kbd> to generate</span></div>
+    </form>
+
+    <main class="work">
+      <section class="card draft">
+        <div class="draft-head">
+          <h2 id="draft-title">Your draft</h2>
+          <div class="tools">
+            <button class="ghost" id="copy" type="button" disabled>Copy</button>
+            <button class="ghost" id="download" type="button" disabled>Download .txt</button>
+          </div>
+        </div>
+        <div class="copy empty" id="output"><span>Fill in the brief and press <strong>Generate draft</strong>, or get three <strong>A/B variants</strong> to compare.</span></div>
+        <div class="meter"><span id="count">0 characters</span><span class="bar" id="bar"><i></i></span></div>
+        <div id="error" class="notice err" hidden></div>
+      </section>
+
+      <section class="card panel" id="variants-panel" hidden>
+        <h2>A/B variants</h2>
+        <p class="small">Same brief, three different angles. Pick one to keep refining it.</p>
+        <div class="variants" id="variants"></div>
+      </section>
+
+      <div class="split">
+        <section class="card panel">
+          <h2>Refine</h2>
+          <div class="chips" id="chips"></div>
+          <label>What should change? <textarea id="feedback" rows="3" maxlength="1000" placeholder="e.g. shorter, warmer, mention the free trial"></textarea></label>
+          <button id="refine" type="button" disabled>Improve draft</button>
+          <div class="hint"><span>Keeps what works, changes what you ask</span><span><kbd>⌘</kbd> <kbd>↵</kbd></span></div>
+        </section>
+        <section class="card panel">
+          <h2>Translate</h2>
+          <label>Into
+            <div class="inline"><select id="target"></select><button id="translate" type="button" disabled>Translate</button></div>
+          </label>
+          <p class="small">Keeps hashtags, emojis and placeholders.</p>
+        </section>
+      </div>
+
+      <section class="card panel" id="changes" hidden>
+        <h2>What changed</h2>
+        <p class="small" id="changes-fb"></p>
+        <div class="diff" id="diff"></div>
+      </section>
+
+      <section class="card panel" id="history" hidden>
+        <h2>Versions</h2>
+        <div class="versions" id="versions"></div>
+      </section>
+    </main>
+  </div>
+  <footer>Mahmoud El Bergui · FastAPI + OpenAI Responses API · <a href="https://github.com/MaHmOuDeB/MarketingWS">MIT licensed</a></footer>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = { opts: null, brief: null, versions: [], backend: "" };
+
+async function api(path, body) {
+  const res = await fetch("/api" + path, body ? {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  } : undefined);
+  let data = null;
+  try { data = await res.json(); } catch (_) { /* non-JSON error page */ }
+  if (!res.ok) {
+    let msg = data && data.detail ? data.detail : `Request failed (${res.status}).`;
+    if (Array.isArray(msg)) msg = msg.map((d) => `${(d.loc || []).slice(1).join(".")}: ${d.msg}`).join("; ");
+    throw new Error(msg);
+  }
+  return data;
+}
+
+function fill(select, items, label = (x) => x) {
+  select.innerHTML = "";
+  for (const [value, text] of items.map((x) => (Array.isArray(x) ? x : [x, label(x)]))) {
+    const o = document.createElement("option"); o.value = value; o.textContent = text; select.append(o);
+  }
+}
+
+function syncPlatforms() {
+  const c = state.opts.campaigns[$("campaign_type").value];
+  $("platform-wrap").hidden = c.platforms.length === 0;
+  fill($("platform"), c.platforms);
+  meter();
+}
+
+function current() { return state.versions.length ? state.versions[state.versions.length - 1] : null; }
+
+function limitFor() {
+  const p = state.brief ? state.brief.platform : ($("platform-wrap").hidden ? null : $("platform").value);
+  return (p && state.opts.char_limits[p]) || null;
+}
+
+function meter() {
+  const v = current(); const n = v ? v.text.length : 0; const lim = limitFor();
+  $("count").textContent = lim ? `${n} / ${lim} characters` : `${n} characters`;
+  const bar = $("bar"); bar.hidden = !lim;
+  if (lim) { bar.firstElementChild.style.width = Math.min(100, (100 * n) / lim) + "%"; bar.classList.toggle("over", n > lim); }
+}
+
+function busy(btn, on, label) {
+  btn.disabled = on;
+  if (on) { btn.dataset.label = btn.textContent; btn.innerHTML = `<span class="spin"></span>${label}`; }
+  else if (btn.dataset.label) { btn.textContent = btn.dataset.label; }
+}
+
+function toast(msg, err = false) {
+  const t = document.createElement("div"); t.className = "toast" + (err ? " err" : ""); t.textContent = msg;
+  $("toasts").append(t); setTimeout(() => t.remove(), err ? 5000 : 2200);
+}
+function showError(msg) { $("error").textContent = msg; $("error").hidden = !msg; if (msg) toast(msg, true); }
+function loading(on) {
+  const o = $("output");
+  if (on) { o.dataset.prev = o.innerHTML; o.classList.add("loading"); o.classList.remove("empty");
+    o.innerHTML = '<div class="sk" style="width:92%"></div><div class="sk" style="width:84%"></div><div class="sk" style="width:66%"></div>'; }
+  else if (o.classList.contains("loading")) {    // request failed or finished without a new version
+    o.classList.remove("loading");
+    if (current()) { o.textContent = current().text; }
+    else if (o.dataset.prev !== undefined) { o.innerHTML = o.dataset.prev; o.classList.add("empty"); }
+  }
+}
+
+function esc(s) { return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+function wordDiff(a, b) {            // LCS over words → <del>/<ins>
+  const x = a.split(/\s+/).filter(Boolean), y = b.split(/\s+/).filter(Boolean);
+  const m = x.length, n = y.length, dp = Array.from({ length: m + 1 }, () => new Uint16Array(n + 1));
+  for (let i = m - 1; i >= 0; i--) for (let j = n - 1; j >= 0; j--)
+    dp[i][j] = x[i] === y[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const out = []; let i = 0, j = 0;
+  while (i < m && j < n) {
+    if (x[i] === y[j]) { out.push(esc(x[i])); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) out.push(`<del>${esc(x[i++])}</del>`);
+    else out.push(`<ins>${esc(y[j++])}</ins>`);
+  }
+  while (i < m) out.push(`<del>${esc(x[i++])}</del>`);
+  while (j < n) out.push(`<ins>${esc(y[j++])}</ins>`);
+  return out.join(" ");
+}
+
+function render() {
+  const v = current(); const has = !!v;
+  $("output").classList.toggle("empty", !has);
+  if (has) {
+    const o = $("output"); o.classList.remove("loading"); o.textContent = v.text;
+    o.classList.remove("enter"); void o.offsetWidth; o.classList.add("enter");
+    $("draft-title").textContent = v.label;
+  }
+  for (const id of ["copy", "download", "refine", "translate"]) $(id).disabled = !has;
+  document.querySelectorAll(".chip").forEach((c) => (c.disabled = !has));
+  $("banner").hidden = state.backend !== "demo";
+  meter();
+  const last = state.versions.length > 1 && v.feedback;
+  $("changes").hidden = !last;
+  if (last) {
+    $("changes-fb").textContent = `Feedback: ${v.feedback}`;
+    $("diff").innerHTML = wordDiff(state.versions[state.versions.length - 2].text, v.text);
+  }
+  $("history").hidden = state.versions.length < 2;
+  $("versions").innerHTML = state.versions.slice().reverse().map((x, k) =>
+    `<div class="version${k === 0 ? " current" : ""}"><b>${esc(x.label)}</b><p>${esc(x.text)}</p></div>`).join("");
+}
+
+function readBrief() {
+  return {
+    campaign_type: $("campaign_type").value, tone: $("tone").value, language: $("language").value,
+    topic: $("topic").value.trim(), audience: $("audience").value.trim() || null,
+    extra_instructions: $("extra").value.trim() || null,
+    platform: $("platform-wrap").hidden ? null : $("platform").value,
+  };
+}
+
+function push(text, label, extra = {}) { state.versions.push({ text, label, ...extra }); render(); }
+
+$("brief").addEventListener("submit", async (e) => {
+  e.preventDefault(); showError("");
+  const brief = readBrief();
+  busy($("generate"), true, "Writing…"); loading(true);
+  try {
+    const r = await api("/generate", brief);
+    state.brief = brief; state.backend = r.backend; state.versions = [];
+    $("variants-panel").hidden = true;
+    push(r.content, "First draft"); toast("Draft ready");
+    saveBrief(brief);
+  } catch (err) { showError(err.message); }
+  finally { busy($("generate"), false); loading(false); }
+});
+
+$("refine").addEventListener("click", async () => {
+  const fb = $("feedback").value.trim();
+  if (fb.length < 2) { $("feedback").focus(); return; }
+  showError(""); busy($("refine"), true, "Revising…"); loading(true);
+  try {
+    const r = await api("/refine", { ...state.brief, draft: current().text, feedback: fb });
+    push(r.content, `Revision ${state.versions.length}`, { feedback: fb });
+    $("feedback").value = ""; toast("Revised — see what changed below");
+  } catch (err) { showError(err.message); }
+  finally { busy($("refine"), false); loading(false); }
+});
+
+$("translate").addEventListener("click", async () => {
+  const lang = $("target").value; showError(""); busy($("translate"), true, "Translating…"); loading(true);
+  try {
+    const r = await api("/translate", { text: current().text, language: lang, platform: state.brief.platform });
+    push(r.content, `Translation (${lang})`); toast(`Translated into ${lang}`);
+  } catch (err) { showError(err.message); }
+  finally { busy($("translate"), false); loading(false); }
+});
+
+$("copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(current().text); $("copy").textContent = "Copied"; toast("Copied to clipboard"); }
+  catch (_) { const r = document.createRange(); r.selectNodeContents($("output")); getSelection().removeAllRanges(); getSelection().addRange(r); $("copy").textContent = "Selected"; }
+  setTimeout(() => ($("copy").textContent = "Copy"), 1500);
+});
+
+$("download").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([current().text], { type: "text/plain" }));
+  a.download = "marketing_copy.txt"; a.click(); URL.revokeObjectURL(a.href);
+});
+
+const QUICK = ["Shorter", "More formal", "Warmer and more personal", "Stronger call to action", "No hashtags", "No emojis"];
+$("chips").innerHTML = QUICK.map((q) => `<button type="button" class="chip" disabled>${q}</button>`).join("");
+$("chips").addEventListener("click", (e) => {
+  if (e.target.classList.contains("chip") && !e.target.disabled) { $("feedback").value = e.target.textContent; $("refine").click(); }
+});
+
+$("variants-btn").addEventListener("click", async () => {
+  if (!$("brief").reportValidity()) return;
+  const brief = readBrief(); showError(""); busy($("variants-btn"), true, "Writing 3…"); loading(true);
+  try {
+    const r = await api("/variants", { ...brief, count: 3 });
+    state.brief = brief; state.backend = r.backend; state.versions = [];
+    $("variants").innerHTML = r.variants.map((v, i) =>
+      `<div class="variant"><span class="tag">${String.fromCharCode(65 + i)} · ${esc(v.angle)}</span><p>${esc(v.content)}</p>` +
+      `<button type="button" data-i="${i}">Use variant ${String.fromCharCode(65 + i)}</button></div>`).join("");
+    state.variantList = r.variants;
+    $("variants-panel").hidden = false;
+    push(r.variants[0].content, `Variant A · ${r.variants[0].angle}`); toast("3 variants ready");
+    saveBrief(brief);
+  } catch (err) { showError(err.message); }
+  finally { busy($("variants-btn"), false); loading(false); }
+});
+$("variants").addEventListener("click", (e) => {
+  const i = e.target.dataset && e.target.dataset.i;
+  if (i === undefined) return;
+  const v = state.variantList[+i];
+  state.versions = []; push(v.content, `Variant ${String.fromCharCode(65 + +i)} · ${v.angle}`);
+  $("output").scrollIntoView({ behavior: "smooth", block: "center" });
+});
+
+function saveBrief(b) { try { localStorage.setItem("mcg-brief", JSON.stringify(b)); } catch (_) { /* storage blocked */ } }
+function restoreBrief() {
+  let b = null;
+  try { b = JSON.parse(localStorage.getItem("mcg-brief") || "null"); } catch (_) { return; }
+  if (!b || !state.opts.campaigns[b.campaign_type]) return;
+  $("campaign_type").value = b.campaign_type; syncPlatforms();
+  if (b.platform) $("platform").value = b.platform;
+  for (const k of ["tone", "language"]) if (b[k]) $(k).value = b[k];
+  $("topic").value = b.topic || ""; $("audience").value = b.audience || ""; $("extra").value = b.extra_instructions || "";
+  meter();
+}
+
+$("campaign_type").addEventListener("change", syncPlatforms);
+$("platform").addEventListener("change", meter);
+
+document.addEventListener("keydown", (e) => {
+  if (!(e.metaKey || e.ctrlKey) || e.key !== "Enter") return;
+  e.preventDefault();
+  if (document.activeElement === $("feedback")) { if (!$("refine").disabled) $("refine").click(); }
+  else $("brief").requestSubmit();
+});
+
+const THEMES = ["auto", "light", "dark"];
+function applyTheme(t) {
+  if (t === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", t);
+  $("theme").textContent = "theme: " + t;
+  try { localStorage.setItem("mcg-theme", t); } catch (_) { /* storage blocked */ }
+}
+$("theme").addEventListener("click", () => {
+  const now = document.documentElement.getAttribute("data-theme") || "auto";
+  applyTheme(THEMES[(THEMES.indexOf(now) + 1) % THEMES.length]);
+});
+try { applyTheme(localStorage.getItem("mcg-theme") || "auto"); } catch (_) { applyTheme("auto"); }
+
+(async function init() {
+  try {
+    const [opts, health] = await Promise.all([api("/options"), api("/health")]);
+    state.opts = opts; state.backend = health.backend;
+    fill($("campaign_type"), Object.entries(opts.campaigns).map(([k, c]) => [k, c.label]));
+    fill($("tone"), opts.tones); fill($("language"), opts.languages);
+    fill($("target"), opts.languages.filter((l) => l !== "English").concat("English"));
+    syncPlatforms();
+    restoreBrief();
+    const live = health.backend !== "demo";
+    $("backend-label").textContent = live ? health.backend.replace("openai:", "model: ") : "demo mode";
+    $("backend").classList.toggle("live", live);
+    $("banner").hidden = live;
+  } catch (err) {
+    $("backend-label").textContent = "offline"; showError("The API is not reachable: " + err.message);
+  }
+})();
+</script>
+</body>
+</html>

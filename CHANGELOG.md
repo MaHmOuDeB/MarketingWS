@@ -1,0 +1,75 @@
+# Changelog
+
+## 2.1.0 — 2026-09-28 · Web app, A/B variants, evaluations, Vercel
+
+**New features**
+- **Web interface** (`public/index.html`): a responsive single-page app served together with the API, so the
+  whole product runs as one deployment (Vercel, or `uvicorn server:app` locally). Light/dark theme that
+  follows the system with a manual toggle, loading skeletons, toasts, a live character meter against the
+  platform's limit, copy and download, keyboard shortcuts (⌘/Ctrl + Enter to generate or refine), and it
+  remembers your last brief in the browser.
+- **A/B variants** (`POST /variants`, "A/B variants" button): three versions of the same brief from
+  deliberately different angles (benefit-led, question-led, proof-led), so an A/B test compares approaches
+  instead of near-identical rewrites. Pick one and keep refining it.
+- **One-click refinements:** "Shorter", "More formal", "Warmer and more personal", "Stronger call to action",
+  "No hashtags", "No emojis".
+- **Behavioural evaluation suite** (`evals/run_evals.py`): runs every campaign type, six refinement requests,
+  two translations and the A/B variants against the real model and checks, before vs after, that the output
+  changed the way it was asked (shorter is shorter, "no hashtags" removes them, the free trial gets mentioned,
+  placeholders survive translation, variants really differ). Writes `evals/report.md` with the before/after texts.
+- `GET /options` now also returns each platform's character limit.
+
+**Deployment**
+- `server.py`: one entry point serving the web UI at `/` and the API under `/api` (docs at `/api/docs`).
+- Vercel configuration: `[tool.vercel]` entrypoint in `pyproject.toml`, `vercel.json` (function duration,
+  bundle exclusions, security headers).
+- The API package moved from `api/` to `backend/` (Vercel reserves `api/` for file-based functions).
+
+**Fixes**
+- The loading skeleton no longer stays on screen when a request fails.
+
+## 2.0.0 — 2026-09-28 · Modernisation after the thesis
+
+**Repository**
+- Removed two committed virtual environments (17,799 files) and `.DS_Store`; history rewritten so the repo
+  went from 134 MB to about 40 KB. All commits kept.
+- The version evaluated in the thesis is preserved as the tag `thesis-2025`.
+- MIT licence, `.env.example`, stricter `.gitignore`, pinned dependencies.
+
+**API (Flask → FastAPI)**
+- FastAPI with validated request models, automatic OpenAPI docs, `/health`, `/options`, `/generate`,
+  `/refine`, `/translate`.
+- OpenAI **Responses API** with a configurable model (`OPENAI_MODEL`, default `gpt-4.1-mini`);
+  `gpt-3.5-turbo`, used by the thesis version, shuts down on 23 Oct 2026. Any OpenAI-compatible endpoint
+  via `OPENAI_BASE_URL`; sampling parameters skipped for reasoning models.
+- Offline **demo mode** when no API key is set, so anyone can try it and the tests need no key.
+- Protection for public deployments: optional `X-API-Key`, per-IP rate limiting, input size limits,
+  errors that don't leak internals (422 for invalid input, 502 for model failures).
+
+**Behaviour fixes**
+- **Refinement now revises the current draft**: the previous draft is sent back to the model with the
+  feedback. The thesis version resent only the brief plus feedback, so "Improve" regenerated from scratch.
+- **Translation translates the current draft** (keeping hashtags, emojis and placeholders) instead of
+  generating new copy in another language.
+- Every campaign type now gets the platform it needs: four templates used a platform the UI never asked
+  for, producing prompts like "for  about …".
+- Output budget per campaign type (the fixed 180-token cap cut off emails and blog intros).
+- Channel character limits (X 280, LinkedIn 3,000, Google Ads 90 …): the model is asked to respect them,
+  asked once to shorten if needed, and only then trimmed at a word boundary (not mid-word).
+- System prompt rewritten (sentences previously ran together without spaces) and typos fixed.
+
+**Interface (Streamlit)**
+- Platform choice per campaign type, readable draft view, word-level diff of each revision, version
+  history, translation of the current draft, developer menu hidden.
+
+**Engineering**
+- Tests (offline, fake and demo backends), ruff lint and format, GitHub Actions CI on Python 3.12 and 3.13
+  plus a Docker build-and-smoke-test job.
+- Python 3.12 images running as a non-root user with health checks; fixed docker-compose port mapping
+  (the old compose file mapped ports the apps didn't listen on).
+- README rewritten: thesis evaluation results, architecture, quick start, API, configuration, deployment.
+
+## 1.0 — 2025 · Thesis version
+
+Flask API + Streamlit UI on `gpt-3.5-turbo`, deployed on Google Cloud Run, evaluated with nine professional
+marketers (SUS 83/100, relevance 4.6/5, fluency 4.7/5, 7 of 9 preferred it to writing manually). Tag `thesis-2025`.

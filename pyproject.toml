@@ -1,11 +1,20 @@
 [project]
 name = "marketing-content-generator"
-version = "2.0.0"
-description = "Generate, refine and translate marketing copy with an LLM (FastAPI + Streamlit)."
-requires-python = ">=3.9"
+version = "2.1.0"
+description = "Generate, refine and translate marketing copy with an LLM (FastAPI + web UI + Streamlit)."
+requires-python = ">=3.12"
+# runtime dependencies of the web deployment (Vercel installs these); keep in sync with backend/requirements.txt
+dependencies = [
+    "fastapi==0.128.8",
+    "pydantic==2.13.5",
+    "openai==2.48.0",
+]
+
+[tool.vercel]
+entrypoint = "server:app"
 
 [tool.pytest.ini_options]
-pythonpath = ["api"]
+pythonpath = ["backend", "."]
 testpaths = ["tests"]
 
 [tool.ruff]

@@ -68,6 +68,10 @@ class DemoLLM:
             return f"{draft}\n\n(Revised for: {feedback}) [demo]"
         topic = re.search(r"about (.+?)(?:,| for | to |\.)", last)
         subject = topic.group(1) if topic else "your offer"
+        if "Angle: Open with a question" in last:
+            return f"Still guessing where it all goes? {subject.capitalize()} shows you in seconds. Try it free. [demo]"
+        if "Angle: Open with a concrete fact" in last:
+            return f"[X%] of users say {subject} changed how they plan. See why — start today. [demo]"
         return (
             f"Ready to rethink {subject}? Here's the one change that makes it easier. "
             f"Discover how {subject} saves you time from day one — try it today. "

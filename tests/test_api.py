@@ -133,3 +133,27 @@ def test_openai_backend_uses_responses_api_and_skips_temperature_for_reasoning_m
     sent.clear()
     llm.complete("sys", [{"role": "user", "content": "hi"}], 100)
     assert "temperature" not in sent
+
+
+def test_variants_are_distinct_angles(client):
+    r = client.post("/variants", json={**BRIEF, "count": 3}).json()
+    assert [v["angle"] for v in r["variants"]] == ["Benefit-led", "Question-led", "Proof-led"]
+    assert len({v["content"] for v in r["variants"]}) == 3
+    assert client.post("/variants", json={**BRIEF, "count": 7}).status_code == 422
+
+
+def test_options_expose_channel_limits(client):
+    assert client.get("/options").json()["char_limits"]["X (Twitter)"] == 280
+
+
+def test_single_entrypoint_serves_web_ui_and_api(monkeypatch):
+    import server
+
+    main._llm = DemoLLM()
+    main._hits.clear()
+    web = TestClient(server.app)
+    page = web.get("/")
+    assert page.status_code == 200 and "Marketing Content Generator" in page.text
+    assert web.get("/api/health").json()["status"] == "ok"
+    assert web.post("/api/generate", json=BRIEF).status_code == 200
+    assert web.get("/api/docs").status_code == 200

@@ -46,6 +46,39 @@ def generate(
     return _fit(llm, text, platform, language, campaign_type)
 
 
+ANGLES = (
+    ("Benefit-led", "Lead with the single biggest benefit for the reader."),
+    ("Question-led", "Open with a question that names the reader's problem."),
+    ("Proof-led", "Open with a concrete fact, number or result (use a placeholder like [X%] if none is given)."),
+)
+
+
+def variants(
+    llm: LLM,
+    *,
+    count: int,
+    campaign_type: str,
+    tone: str,
+    topic: str,
+    audience: Optional[str],
+    platform: Optional[str],
+    language: str,
+    extra_instructions: Optional[str],
+) -> List[dict]:
+    """A/B test variants: the same brief written from clearly different angles, so a test can tell
+    which approach works — not three near-identical rewrites."""
+    brief = build_brief(campaign_type, tone, topic, audience, platform) + _limit_note(platform)
+    out = []
+    for name, how in ANGLES[: max(1, min(count, len(ANGLES)))]:
+        text = llm.complete(
+            system_prompt(language, extra_instructions),
+            [{"role": "user", "content": f"{brief}\nAngle: {how}"}],
+            CAMPAIGNS[campaign_type].max_output_tokens,
+        )
+        out.append({"angle": name, "content": _fit(llm, text, platform, language, campaign_type)})
+    return out
+
+
 def refine(
     llm: LLM,
     *,

@@ -7,7 +7,8 @@ types: social posts, emails, PPC ads, blog introductions, re-engagement messages
 campaigns, product launches and crisis responses.
 
 Built for my **Master's thesis in Data Science (2025)** and modernised in 2026: a FastAPI service
-on OpenAI's current Responses API, a Streamlit interface, an offline demo mode, tests and CI.
+on OpenAI's current Responses API, a web app that deploys to Vercel, A/B variants, a behavioural
+evaluation suite, an offline demo mode, tests and CI. See [CHANGELOG.md](CHANGELOG.md) for every change.
 
 ## What it does
 
@@ -19,6 +20,10 @@ on OpenAI's current Responses API, a Streamlit interface, an offline demo mode, 
   emojis and placeholders intact.
 - **Fits the channel.** Character limits per platform (X 280, LinkedIn 3,000, Google Ads 90 …): the
   model is asked to respect them, asked once more to shorten if needed, and only then trimmed at a word.
+- **A/B variants.** Three versions of the same brief from different angles (benefit-led, question-led,
+  proof-led), so a test compares approaches, not near-identical rewrites.
+- **One-click refinements** ("Shorter", "More formal", "Stronger call to action", "No hashtags" …),
+  a character meter against the platform limit, copy/download, light and dark themes, keyboard shortcuts.
 - **Download** the final copy as text. Every version stays in the history.
 
 ## Thesis evaluation
@@ -41,20 +46,24 @@ evaluation are in [`examples/samples_thesis.csv`](examples/samples_thesis.csv).
 
 ```mermaid
 flowchart LR
-    U[Marketer] --> S[Streamlit UI]
-    S -- "REST · X-API-Key" --> A[FastAPI service]
+    U[Marketer] --> W1[Web app · public/]
+    U --> S[Streamlit UI · local/Docker]
+    W1 -- "/api" --> A[FastAPI service]
+    S -- "REST · X-API-Key" --> A
     A --> V{{validation · rate limit}}
-    V --> W[generate · refine · translate]
+    V --> W[generate · variants · refine · translate]
     W --> L{LLM backend}
     L -->|OPENAI_API_KEY set| O[OpenAI Responses API]
     L -->|no key| D[Demo mode · offline]
 ```
 
-- `api/app/campaigns.py` — campaign briefs, platforms, output budgets, channel limits
-- `api/app/service.py` — the generate / refine / translate workflow
-- `api/app/llm.py` — OpenAI backend (model set by `OPENAI_MODEL`) and the offline demo backend
-- `api/app/main.py` — HTTP layer: request models, API key, rate limiting, error handling
-- `ui/streamlit_app.py` — the interface
+- `backend/app/campaigns.py` — campaign briefs, platforms, output budgets, channel limits
+- `backend/app/service.py` — the generate / variants / refine / translate workflow
+- `backend/app/llm.py` — OpenAI backend (model set by `OPENAI_MODEL`) and the offline demo backend
+- `backend/app/main.py` — HTTP layer: request models, API key, rate limiting, error handling
+- `server.py` — one entry point: the web app at `/`, the API under `/api` (used by Vercel)
+- `public/index.html` — the web app · `ui/streamlit_app.py` — the Streamlit interface
+- `evals/run_evals.py` — behavioural checks against the real model
 
 ## Quick start
 
@@ -68,20 +77,29 @@ docker compose up --build
 
 UI: <http://localhost:8501> · API docs: <http://localhost:8000/docs>
 
-**Without Docker** (Python 3.12+):
+**Without Docker** (Python 3.12+), web app and API in one process:
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
-(cd api && uvicorn app.main:app --reload --port 8000)          # terminal 1
-API_URL=http://localhost:8000 streamlit run ui/streamlit_app.py   # terminal 2
+uvicorn server:app --reload                     # web app on :8000, API docs at /api/docs
 ```
+
+The Streamlit interface is still available: run the API with `(cd backend && uvicorn app.main:app --port 8000)`
+and then `API_URL=http://localhost:8000 streamlit run ui/streamlit_app.py`.
 
 **Tests and lint** (offline, no key needed):
 
 ```bash
 pytest -v
-ruff check api ui tests && ruff format --check api ui tests
+ruff check backend ui tests server.py && ruff format --check backend ui tests server.py
+```
+
+**Behavioural evaluation** (real model, a few cents per run): checks that each refinement changes the
+draft the way it asks, that translations keep placeholders and hashtags, and that A/B variants differ.
+
+```bash
+OPENAI_API_KEY=sk-... python evals/run_evals.py   # prints PASS/FAIL, writes evals/report.md (before → after)
 ```
 
 ## API
@@ -93,6 +111,7 @@ ruff check api ui tests && ruff format --check api ui tests
 | `POST` | `/generate` | First draft from a brief |
 | `POST` | `/refine` | Revise the current draft with feedback |
 | `POST` | `/translate` | Translate the current draft |
+| `POST` | `/variants` | 2–3 A/B variants from different angles |
 
 ```bash
 curl -s localhost:8000/generate -H 'Content-Type: application/json' -d '{
@@ -115,10 +134,14 @@ Interactive documentation with request examples: `/docs`.
 
 ## Deploying
 
-Both images listen on `$PORT`, run as a non-root user and include a health check, so they deploy as
-they are to Cloud Run or any container platform. For a public deployment set `APP_API_KEY` and keep
-the rate limit on, so nobody else can spend your OpenAI credits. The original Cloud Run demo from the
-thesis is offline.
+**Vercel (web app + API).** Import the repository in Vercel; `pyproject.toml` points Vercel at
+`server:app`, `public/` is served by the CDN and the API runs as a Python function under `/api`. Add
+`OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) in the project's environment variables — without a key the
+site runs in demo mode. For a public site, also set a monthly budget cap in your OpenAI account and add a
+Vercel Firewall rate-limit rule for `/api/*`: the in-app rate limit only sees one serverless instance.
+
+**Containers.** Both images listen on `$PORT`, run as a non-root user and include a health check, so they
+deploy as they are to Cloud Run or any container platform; set `APP_API_KEY` for a public API.
 
 ## What changed since the thesis version
 
@@ -131,6 +154,10 @@ thesis is offline.
 | Platform asked only for social posts, though four other templates used it | Platforms per campaign type, validated |
 | Open API, no limits | Optional API key, rate limiting, input size limits, errors that don't leak internals |
 | No tests, virtual environments committed | Unit and API tests, lint, Docker smoke test in CI; clean repository |
+| Streamlit only, Cloud Run | Web app + API as one Vercel deployment; Streamlit kept for local use |
+| — | A/B variants, one-click refinements, behavioural evaluation suite |
+
+Every change is listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
