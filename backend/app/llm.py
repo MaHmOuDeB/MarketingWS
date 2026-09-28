@@ -19,6 +19,24 @@ from typing import List, Optional, Protocol
 
 Message = dict  # {"role": "user" | "assistant", "content": str}
 
+
+def env(name: str, default: str = "") -> str:
+    """An environment variable, with empty or blank values treated as unset.
+
+    Hosting dashboards (Vercel imports .env.example) often create variables with empty values;
+    those must fall back to the default rather than become an empty model name or number.
+    """
+    value = os.getenv(name, "").strip()
+    return value or default
+
+
+def env_number(name: str, default: float) -> float:
+    try:
+        return float(env(name) or default)
+    except ValueError:
+        return default
+
+
 DEFAULT_MODEL = "gpt-4.1-mini"
 DEFAULT_CLAUDE_MODEL = "claude-haiku-4-5"  # fast and inexpensive; claude-sonnet-5 for higher quality
 
@@ -34,9 +52,8 @@ class OpenAILLM:
         from openai import OpenAI  # imported lazily so demo mode needs no SDK configuration
 
         self.client = OpenAI(api_key=api_key, timeout=45.0, max_retries=2)
-        self.model = model or os.getenv("OPENAI_MODEL", DEFAULT_MODEL)
-        t = os.getenv("OPENAI_TEMPERATURE")
-        self.temperature = temperature if temperature is not None else (float(t) if t else 0.7)
+        self.model = model or env("OPENAI_MODEL", DEFAULT_MODEL)
+        self.temperature = temperature if temperature is not None else env_number("OPENAI_TEMPERATURE", 0.7)
         self.name = f"openai:{self.model}"
 
     def _supports_temperature(self) -> bool:
@@ -61,9 +78,10 @@ class ClaudeLLM:
         from anthropic import Anthropic  # imported lazily so the other backends don't need the SDK
 
         self.client = Anthropic(api_key=api_key, timeout=45.0, max_retries=2)
-        self.model = model or os.getenv("ANTHROPIC_MODEL", DEFAULT_CLAUDE_MODEL)
-        t = os.getenv("ANTHROPIC_TEMPERATURE")
-        self.temperature: Optional[float] = temperature if temperature is not None else (float(t) if t else 0.7)
+        self.model = model or env("ANTHROPIC_MODEL", DEFAULT_CLAUDE_MODEL)
+        self.temperature: Optional[float] = (
+            temperature if temperature is not None else env_number("ANTHROPIC_TEMPERATURE", 0.7)
+        )
         self.name = f"anthropic:{self.model}"
 
     def complete(self, instructions: str, messages: List[Message], max_output_tokens: int) -> str:
@@ -120,10 +138,10 @@ def clean(text: str) -> str:
 
 
 def from_env() -> LLM:
-    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    provider = os.getenv("LLM_PROVIDER", "").strip().lower()
-    if os.getenv("DEMO_MODE", "").lower() in ("1", "true", "yes") or provider == "demo":
+    openai_key = env("OPENAI_API_KEY")
+    anthropic_key = env("ANTHROPIC_API_KEY")
+    provider = env("LLM_PROVIDER").lower()
+    if env("DEMO_MODE").lower() in ("1", "true", "yes") or provider == "demo":
         return DemoLLM()
     if provider in ("anthropic", "claude"):
         if not anthropic_key:

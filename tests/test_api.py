@@ -212,3 +212,23 @@ def test_single_entrypoint_serves_web_ui_and_api(monkeypatch):
     assert web.get("/api/health").json()["status"] == "ok"
     assert web.post("/api/generate", json=BRIEF).status_code == 200
     assert web.get("/api/docs").status_code == 200
+
+
+def test_empty_environment_variables_fall_back_to_defaults(monkeypatch, client):
+    # Vercel imports .env.example, creating these variables with empty values
+    for k in (
+        "RATE_LIMIT_PER_MIN",
+        "APP_API_KEY",
+        "OPENAI_MODEL",
+        "ANTHROPIC_MODEL",
+        "LLM_PROVIDER",
+        "OPENAI_TEMPERATURE",
+        "ANTHROPIC_TEMPERATURE",
+        "CORS_ORIGINS",
+    ):
+        monkeypatch.setenv(k, "")
+    main._hits.clear()
+    assert client.post("/generate", json=BRIEF).status_code == 200
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+    llm = from_env()
+    assert llm.name == "anthropic:claude-haiku-4-5" and llm.temperature == 0.7

@@ -30,7 +30,7 @@ from pydantic import BaseModel, Field
 
 from . import service
 from .campaigns import CAMPAIGNS, CHAR_LIMITS, LANGUAGES, TONES
-from .llm import LLM, from_env
+from .llm import LLM, env, env_number, from_env
 
 log = logging.getLogger("marketing-api")
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
@@ -40,7 +40,7 @@ app = FastAPI(
     version="2.0.0",
     description="Generate, refine and translate marketing copy with an LLM.",
 )
-origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
+origins = [o.strip() for o in env("CORS_ORIGINS").split(",") if o.strip()]
 if origins:
     app.add_middleware(
         CORSMiddleware,
@@ -65,10 +65,10 @@ _hits: Dict[str, Deque[float]] = defaultdict(deque)
 
 
 def guard(request: Request) -> None:
-    key = os.getenv("APP_API_KEY")
+    key = env("APP_API_KEY")
     if key and request.headers.get("x-api-key") != key:
         raise HTTPException(401, "Missing or invalid X-API-Key header.")
-    limit = int(os.getenv("RATE_LIMIT_PER_MIN", "20"))
+    limit = max(1, int(env_number("RATE_LIMIT_PER_MIN", 20)))
     ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
         request.client.host if request.client else "unknown"
     )

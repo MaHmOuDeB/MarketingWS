@@ -11,7 +11,11 @@
 - The evaluation suite runs against either provider, reads keys from `.env`, and writes one report per
   provider (`evals/report-openai.md`, `evals/report-anthropic.md`) so the two can be compared.
 - The web app and Streamlit UI name the active model for either provider; demo-mode notices mention both keys.
-- Tests: Claude request shape, the temperature fallback and provider selection (15 tests, offline).
+- Tests: Claude request shape, the temperature fallback and provider selection (16 tests, offline).
+- **Fix:** empty environment variables now fall back to their defaults. Vercel imports `.env.example`
+  and creates the variables with empty values; an empty `RATE_LIMIT_PER_MIN` made every generate,
+  refine, translate and variants request fail with a 500 on the live site, and an empty model name
+  would have been sent to the provider.
 
 ## 2.1.0 — 2026-09-28 · Web app, A/B variants, evaluations, Vercel
 
