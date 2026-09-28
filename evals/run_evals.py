@@ -37,6 +37,13 @@ BASE = dict(
 )
 
 
+def invented_figures(text: str, brief: str) -> list:
+    """Numbers in the copy that the brief never gave (placeholders like [X%] are fine)."""
+    given = set(re.findall(r"\d+(?:[.,]\d+)?", brief))
+    outside = re.sub(r"\[[^\]]*\]|<[^>]*>", " ", text)
+    return sorted({n for n in re.findall(r"\d+(?:[.,]\d+)?", outside) if n not in given})
+
+
 def similarity(a: str, b: str) -> float:
     return difflib.SequenceMatcher(a=a.split(), b=b.split()).ratio()
 
@@ -81,6 +88,10 @@ def run(llm) -> list:
         if key == "product_launch":
             ok &= "<registration_link>" in text
             extra = "placeholder kept"
+        made_up = invented_figures(text, BASE["topic"] + " " + (platform or ""))
+        ok &= not made_up
+        if made_up:
+            extra += f"{'; ' if extra else ''}invented figures: {', '.join(made_up)}"
         check(
             "generate",
             c.label,
@@ -138,6 +149,8 @@ def run(llm) -> list:
 
     # 4. A/B variants are genuinely different
     vs = service.variants(llm, count=3, campaign_type="social_media", platform="LinkedIn", **BASE)
+    made_up = sorted({n for v in vs for n in invented_figures(v["content"], BASE["topic"])})
+    check("variants", "no invented figures", not made_up, ", ".join(made_up) or "only brief facts and [placeholders]")
     sims = [similarity(vs[i]["content"], vs[j]["content"]) for i in range(3) for j in range(i + 1, 3)]
     check(
         "variants",

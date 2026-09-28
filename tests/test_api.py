@@ -327,3 +327,24 @@ def test_a_rejected_request_names_the_field(client):
     detail = client.post("/generate", json=BRIEF).json()["detail"]
     assert "400" in detail and "'reasoning_effort'" in detail and "echo of user input" not in detail
     main._llm = DemoLLM()
+
+
+def test_prompt_forbids_invented_facts_and_asks_for_placeholders():
+    from app.service import system_prompt
+
+    prompt = system_prompt("English", None)
+    assert "never invent" in prompt and "[X%]" in prompt and "no credit card required" in prompt
+
+
+def test_eval_flags_invented_figures():
+    import importlib.util
+    import pathlib
+
+    spec = importlib.util.spec_from_file_location(
+        "run_evals", pathlib.Path(__file__).parents[1] / "evals" / "run_evals.py"
+    )
+    ev = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ev)
+    brief = "Budgetly, a budgeting app; 14-day free trial"
+    assert ev.invented_figures("70% of students overspend $1,200. Try it 14 days free.", brief) == ["1,200", "70"]
+    assert ev.invented_figures("[X%] of students overspend. Try it 14 days free.", brief) == []

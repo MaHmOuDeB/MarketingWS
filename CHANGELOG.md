@@ -13,6 +13,10 @@
   provider overloaded) without echoing the provider's message.
 - Answers cut off by the output limit (finish reason `length`) are retried once with more room.
 - `OPENAI_REASONING_EFFORT` (e.g. `low` for Groq's `openai/gpt-oss-120b`); README: Groq setup.
+- **No invented facts:** the live test on Groq produced made-up statistics ("70% of students…",
+  "$1,200 a semester") and offers ("no credit card required"). The system prompt now forbids invented
+  figures, features and offers and asks for `[X%]`-style placeholders instead; the evaluation suite fails
+  any copy containing a number the brief didn't give.
 
 ## 2.2.0 — 2026-09-28 · Claude support
 
