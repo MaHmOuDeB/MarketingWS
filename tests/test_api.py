@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app import main, service
 from app.campaigns import CAMPAIGNS, build_brief, trim_to_limit
-from app.llm import DemoLLM, OpenAILLM
+from app.llm import ClaudeLLM, DemoLLM, OpenAILLM, from_env
 
 
 class Recorder:
@@ -133,6 +133,61 @@ def test_openai_backend_uses_responses_api_and_skips_temperature_for_reasoning_m
     sent.clear()
     llm.complete("sys", [{"role": "user", "content": "hi"}], 100)
     assert "temperature" not in sent
+
+
+def _fake_claude(model="claude-haiku-4-5", reject_temperature=False):
+    sent = []
+
+    class FakeMessages:
+        def create(self, **kwargs):
+            sent.append(kwargs)
+            if reject_temperature and "temperature" in kwargs:
+                raise RuntimeError("temperature is not supported for this model")
+            blocks = [type("B", (), {"type": "text", "text": '"Hello from Claude"'})()]
+            return type("R", (), {"content": blocks})()
+
+    llm = ClaudeLLM.__new__(ClaudeLLM)
+    llm.client = type("C", (), {"messages": FakeMessages()})()
+    llm.model, llm.temperature, llm.name = model, 0.7, f"anthropic:{model}"
+    return llm, sent
+
+
+def test_claude_backend_uses_messages_api():
+    llm, sent = _fake_claude()
+    history = [
+        {"role": "user", "content": "brief"},
+        {"role": "assistant", "content": "draft"},
+        {"role": "user", "content": "Feedback: shorter"},
+    ]
+    assert llm.complete("sys", history, 300) == "Hello from Claude"
+    assert sent[0]["system"] == "sys" and sent[0]["messages"] == history
+    assert sent[0]["max_tokens"] == 300 and sent[0]["temperature"] == 0.7
+
+
+def test_claude_backend_drops_temperature_when_the_model_rejects_it():
+    llm, sent = _fake_claude(reject_temperature=True)
+    assert llm.complete("sys", [{"role": "user", "content": "hi"}], 100) == "Hello from Claude"
+    assert "temperature" in sent[0] and "temperature" not in sent[1]
+    llm.complete("sys", [{"role": "user", "content": "hi"}], 100)  # remembered: one call, no retry
+    assert len(sent) == 3 and "temperature" not in sent[2]
+
+
+def test_provider_selection(monkeypatch):
+    for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "LLM_PROVIDER", "DEMO_MODE"):
+        monkeypatch.delenv(k, raising=False)
+    assert from_env().name == "demo"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+    assert from_env().name == "anthropic:claude-haiku-4-5"
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    assert from_env().name.startswith("openai:")  # both keys: OpenAI unless LLM_PROVIDER says otherwise
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("ANTHROPIC_MODEL", "claude-sonnet-5")
+    assert from_env().name == "anthropic:claude-sonnet-5"
+    monkeypatch.setenv("LLM_PROVIDER", "demo")
+    assert from_env().name == "demo"
+    monkeypatch.setenv("LLM_PROVIDER", "gemini")
+    with pytest.raises(RuntimeError):
+        from_env()
 
 
 def test_variants_are_distinct_angles(client):

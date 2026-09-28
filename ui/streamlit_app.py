@@ -115,8 +115,8 @@ if not ss.versions:
 current = ss.versions[-1]["text"]
 if ss.backend == "demo":
     st.warning(
-        "Demo mode: no OpenAI key is configured, so this copy is a placeholder. "
-        "Set OPENAI_API_KEY to generate real copy."
+        "Demo mode: no model API key is configured, so this copy is a placeholder. "
+        "Set OPENAI_API_KEY or ANTHROPIC_API_KEY to generate real copy."
     )
 
 left, right = st.columns([3, 2], gap="large")

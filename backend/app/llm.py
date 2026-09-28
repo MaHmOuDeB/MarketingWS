@@ -4,7 +4,11 @@ OpenAILLM   uses the OpenAI Responses API (the current API; Chat Completions is 
             Model, base URL and temperature come from the environment, so the service keeps
             working when OpenAI retires a model: gpt-3.5-turbo, used in the thesis version, shuts
             down on 23 Oct 2026. Any OpenAI-compatible endpoint works via OPENAI_BASE_URL.
+ClaudeLLM   uses Anthropic's Messages API (Claude). Model and temperature from the environment.
 DemoLLM     deterministic, offline copy for trying the app and for tests — no key, no cost.
+
+Which backend runs (from_env): LLM_PROVIDER=openai|anthropic|demo if set; otherwise the provider
+whose API key is set (OpenAI first when both are); otherwise demo mode.
 """
 
 from __future__ import annotations
@@ -16,6 +20,7 @@ from typing import List, Optional, Protocol
 Message = dict  # {"role": "user" | "assistant", "content": str}
 
 DEFAULT_MODEL = "gpt-4.1-mini"
+DEFAULT_CLAUDE_MODEL = "claude-haiku-4-5"  # fast and inexpensive; claude-sonnet-5 for higher quality
 
 
 class LLM(Protocol):
@@ -51,6 +56,37 @@ class OpenAILLM:
         return clean(response.output_text)
 
 
+class ClaudeLLM:
+    def __init__(self, api_key: str, model: Optional[str] = None, temperature: Optional[float] = None):
+        from anthropic import Anthropic  # imported lazily so the other backends don't need the SDK
+
+        self.client = Anthropic(api_key=api_key, timeout=45.0, max_retries=2)
+        self.model = model or os.getenv("ANTHROPIC_MODEL", DEFAULT_CLAUDE_MODEL)
+        t = os.getenv("ANTHROPIC_TEMPERATURE")
+        self.temperature: Optional[float] = temperature if temperature is not None else (float(t) if t else 0.7)
+        self.name = f"anthropic:{self.model}"
+
+    def complete(self, instructions: str, messages: List[Message], max_output_tokens: int) -> str:
+        kwargs = {
+            "model": self.model,
+            "system": instructions,
+            "messages": messages,
+            "max_tokens": max_output_tokens,
+        }
+        if self.temperature is not None:
+            kwargs["temperature"] = self.temperature
+        try:
+            response = self.client.messages.create(**kwargs)
+        except Exception as e:
+            # some models fix their sampling parameters: retry once without temperature, then remember
+            if "temperature" not in kwargs or "temperature" not in str(e).lower():
+                raise
+            self.temperature = None
+            kwargs.pop("temperature")
+            response = self.client.messages.create(**kwargs)
+        return clean("".join(b.text for b in response.content if getattr(b, "type", "") == "text"))
+
+
 class DemoLLM:
     """Offline stand-in: builds plausible copy from the brief so every screen can be tried."""
 
@@ -84,7 +120,23 @@ def clean(text: str) -> str:
 
 
 def from_env() -> LLM:
-    key = os.getenv("OPENAI_API_KEY", "").strip()
-    if key and os.getenv("DEMO_MODE", "").lower() not in ("1", "true", "yes"):
-        return OpenAILLM(key)
+    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    provider = os.getenv("LLM_PROVIDER", "").strip().lower()
+    if os.getenv("DEMO_MODE", "").lower() in ("1", "true", "yes") or provider == "demo":
+        return DemoLLM()
+    if provider in ("anthropic", "claude"):
+        if not anthropic_key:
+            raise RuntimeError("LLM_PROVIDER=anthropic needs ANTHROPIC_API_KEY")
+        return ClaudeLLM(anthropic_key)
+    if provider == "openai":
+        if not openai_key:
+            raise RuntimeError("LLM_PROVIDER=openai needs OPENAI_API_KEY")
+        return OpenAILLM(openai_key)
+    if provider:
+        raise RuntimeError(f"unknown LLM_PROVIDER {provider!r}: use openai, anthropic or demo")
+    if openai_key:
+        return OpenAILLM(openai_key)
+    if anthropic_key:
+        return ClaudeLLM(anthropic_key)
     return DemoLLM()

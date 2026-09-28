@@ -166,7 +166,7 @@ kbd { font: 500 11px/1 "IBM Plex Mono", ui-monospace, monospace; padding: 3px 5p
     </div>
   </header>
 
-  <div id="banner" class="notice warn" hidden>Demo mode: no OpenAI key is configured on this deployment, so the copy below is a placeholder. The workflow is real; the text is not.</div>
+  <div id="banner" class="notice warn" hidden>Demo mode: no model API key (OpenAI or Anthropic) is configured on this deployment, so the copy below is a placeholder. The workflow is real; the text is not.</div>
 
   <div class="layout">
     <form class="card brief" id="brief" autocomplete="off">
@@ -233,7 +233,7 @@ kbd { font: 500 11px/1 "IBM Plex Mono", ui-monospace, monospace; padding: 3px 5p
       </section>
     </main>
   </div>
-  <footer>Mahmoud El Bergui · FastAPI + OpenAI Responses API · <a href="https://github.com/MaHmOuDeB/MarketingWS">MIT licensed</a></footer>
+  <footer>Mahmoud El Bergui · FastAPI + OpenAI or Claude · <a href="https://github.com/MaHmOuDeB/MarketingWS">MIT licensed</a></footer>
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
@@ -479,7 +479,7 @@ try { applyTheme(localStorage.getItem("mcg-theme") || "auto"); } catch (_) { app
     syncPlatforms();
     restoreBrief();
     const live = health.backend !== "demo";
-    $("backend-label").textContent = live ? health.backend.replace("openai:", "model: ") : "demo mode";
+    $("backend-label").textContent = live ? health.backend.replace(/^\w+:/, "model: ") : "demo mode";
     $("backend").classList.toggle("live", live);
     $("banner").hidden = live;
   } catch (err) {

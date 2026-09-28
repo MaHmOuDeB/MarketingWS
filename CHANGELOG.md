@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.2.0 — 2026-09-28 · Claude support
+
+- **Claude backend** (`ClaudeLLM`, Anthropic Messages API): set `ANTHROPIC_API_KEY` and the service
+  generates, refines, translates and writes A/B variants with Claude. Default model `claude-haiku-4-5`
+  (fast and inexpensive); any Claude model via `ANTHROPIC_MODEL`, e.g. `claude-sonnet-5`.
+  If a model rejects the temperature setting, the backend retries once without it and remembers.
+- **Provider choice:** `LLM_PROVIDER=openai|anthropic|demo`; by default whichever key is set (OpenAI
+  first when both are). A misconfiguration (unknown provider, provider without its key) fails loudly.
+- The evaluation suite runs against either provider, reads keys from `.env`, and writes one report per
+  provider (`evals/report-openai.md`, `evals/report-anthropic.md`) so the two can be compared.
+- The web app and Streamlit UI name the active model for either provider; demo-mode notices mention both keys.
+- Tests: Claude request shape, the temperature fallback and provider selection (15 tests, offline).
+
 ## 2.1.0 — 2026-09-28 · Web app, A/B variants, evaluations, Vercel
 
 **New features**

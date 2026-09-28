@@ -1,7 +1,9 @@
 """Behavioural evaluation against the real model: does the output change the way the brief or the
 feedback asks?
 
-    OPENAI_API_KEY=... python evals/run_evals.py            # prints a table, writes evals/report.md
+    OPENAI_API_KEY=... python evals/run_evals.py            # prints a table, writes evals/report-openai.md
+    ANTHROPIC_API_KEY=... python evals/run_evals.py         # the same checks against Claude
+    python evals/run_evals.py                               # uses the keys in .env (LLM_PROVIDER picks one)
 
 Unit tests (tests/) prove the plumbing with a fake model. This suite checks the *model's behaviour*:
 every campaign type fills its structure and channel limit, each refinement changes the draft in the
@@ -23,7 +25,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from app import service  # noqa: E402
 from app.campaigns import CAMPAIGNS, CHAR_LIMITS  # noqa: E402
-from app.llm import OpenAILLM  # noqa: E402
+from app.llm import from_env  # noqa: E402
 
 EMOJI = re.compile("[\U0001f300-\U0001faff☀-➿]")
 BASE = dict(
@@ -43,8 +45,17 @@ def words(t: str) -> int:
     return len(t.split())
 
 
-def run() -> list:
-    llm = OpenAILLM(os.environ["OPENAI_API_KEY"])
+def load_dotenv(path: Path = ROOT / ".env") -> None:
+    """KEY=value lines from .env, without overriding the real environment (no extra dependency)."""
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            key, sep, value = line.partition("=")
+            key, value = key.strip(), value.split(" #", 1)[0].strip().strip("'\"")
+            if sep and key and not key.startswith("#") and value:
+                os.environ.setdefault(key, value)
+
+
+def run(llm) -> list:
     results = []
 
     def check(area, case, ok, detail, before="", after=""):
@@ -138,10 +149,10 @@ def run() -> list:
     return results
 
 
-def report(results: list) -> str:
+def report(results: list, model: str) -> str:
     passed = sum(r["ok"] for r in results)
     lines = [
-        f"# Evaluation report\n\nModel: `{os.getenv('OPENAI_MODEL', 'gpt-4.1-mini')}` · "
+        f"# Evaluation report\n\nModel: `{model}` · "
         f"{time.strftime('%Y-%m-%d %H:%M')} · **{passed}/{len(results)} checks passed**\n",
         "| Area | Case | Result | Detail |",
         "|---|---|---|---|",
@@ -161,10 +172,16 @@ def report(results: list) -> str:
 
 
 if __name__ == "__main__":
-    if not os.getenv("OPENAI_API_KEY"):
-        sys.exit("Set OPENAI_API_KEY to run the behavioural evaluation (the unit tests run without it).")
-    res = run()
-    out = ROOT / "evals" / "report.md"
-    out.write_text(report(res), encoding="utf-8")
+    load_dotenv()
+    llm = from_env()
+    if llm.name == "demo":
+        sys.exit(
+            "Set OPENAI_API_KEY or ANTHROPIC_API_KEY (in the environment or .env) to run the behavioural "
+            "evaluation; the unit tests run without a key."
+        )
+    print(f"Evaluating {llm.name}\n")
+    res = run(llm)
+    out = ROOT / "evals" / f"report-{llm.name.split(':')[0]}.md"
+    out.write_text(report(res, llm.name), encoding="utf-8")
     print(f"\n{sum(r['ok'] for r in res)}/{len(res)} passed · report: {out.relative_to(ROOT)}")
     sys.exit(0 if all(r["ok"] for r in res) else 1)

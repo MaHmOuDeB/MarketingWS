@@ -7,7 +7,7 @@ types: social posts, emails, PPC ads, blog introductions, re-engagement messages
 campaigns, product launches and crisis responses.
 
 Built for my **Master's thesis in Data Science (2025)** and modernised in 2026: a FastAPI service
-on OpenAI's current Responses API, a web app that deploys to Vercel, A/B variants, a behavioural
+that runs on OpenAI (Responses API) or Anthropic's Claude (Messages API), a web app that deploys to Vercel, A/B variants, a behavioural
 evaluation suite, an offline demo mode, tests and CI. See [CHANGELOG.md](CHANGELOG.md) for every change.
 
 ## What it does
@@ -53,13 +53,15 @@ flowchart LR
     A --> V{{validation · rate limit}}
     V --> W[generate · variants · refine · translate]
     W --> L{LLM backend}
-    L -->|OPENAI_API_KEY set| O[OpenAI Responses API]
+    L -->|OPENAI_API_KEY| O[OpenAI Responses API]
+    L -->|ANTHROPIC_API_KEY| C[Claude · Messages API]
     L -->|no key| D[Demo mode · offline]
 ```
 
 - `backend/app/campaigns.py` — campaign briefs, platforms, output budgets, channel limits
 - `backend/app/service.py` — the generate / variants / refine / translate workflow
-- `backend/app/llm.py` — OpenAI backend (model set by `OPENAI_MODEL`) and the offline demo backend
+- `backend/app/llm.py` — OpenAI and Claude backends (models set by `OPENAI_MODEL` / `ANTHROPIC_MODEL`)
+  and the offline demo backend
 - `backend/app/main.py` — HTTP layer: request models, API key, rate limiting, error handling
 - `server.py` — one entry point: the web app at `/`, the API under `/api` (used by Vercel)
 - `public/index.html` — the web app · `ui/streamlit_app.py` — the Streamlit interface
@@ -71,7 +73,7 @@ flowchart LR
 
 ```bash
 git clone https://github.com/MaHmOuDeB/MarketingWS.git && cd MarketingWS
-cp .env.example .env          # optional: add OPENAI_API_KEY for real copy
+cp .env.example .env          # optional: add OPENAI_API_KEY or ANTHROPIC_API_KEY for real copy
 docker compose up --build
 ```
 
@@ -97,16 +99,18 @@ ruff check backend ui tests server.py && ruff format --check backend ui tests se
 
 **Behavioural evaluation** (real model, a few cents per run): checks that each refinement changes the
 draft the way it asks, that translations keep placeholders and hashtags, and that A/B variants differ.
+It reads the keys from `.env` and uses the same provider choice as the app.
 
 ```bash
-OPENAI_API_KEY=sk-... python evals/run_evals.py   # prints PASS/FAIL, writes evals/report.md (before → after)
+python evals/run_evals.py        # prints PASS/FAIL, writes evals/report-<provider>.md (before → after)
+LLM_PROVIDER=anthropic python evals/run_evals.py   # compare providers: run once per provider
 ```
 
 ## API
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/health` | Liveness and the active backend (`openai:<model>` or `demo`) |
+| `GET` | `/health` | Liveness and the active backend (`openai:<model>`, `anthropic:<model>` or `demo`) |
 | `GET` | `/options` | Campaign types with their platforms, tones, languages |
 | `POST` | `/generate` | First draft from a brief |
 | `POST` | `/refine` | Revise the current draft with feedback |
@@ -125,9 +129,13 @@ Interactive documentation with request examples: `/docs`.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `OPENAI_API_KEY` | — | Enables real generation; without it the service runs in demo mode |
+| `LLM_PROVIDER` | — | `openai`, `anthropic` or `demo`; by default, whichever key is set (OpenAI first) |
+| `OPENAI_API_KEY` | — | Enables generation with OpenAI |
 | `OPENAI_MODEL` | `gpt-4.1-mini` | Any current OpenAI model id |
 | `OPENAI_BASE_URL` | — | Any OpenAI-compatible endpoint |
+| `ANTHROPIC_API_KEY` | — | Enables generation with Claude |
+| `ANTHROPIC_MODEL` | `claude-haiku-4-5` | Any current Claude model id (`claude-sonnet-5` for higher quality) |
+| — | | Without either key the service runs in demo mode |
 | `APP_API_KEY` | — | If set, requests must send `X-API-Key` (the UI sends it server-side) |
 | `RATE_LIMIT_PER_MIN` | `20` | Requests per client IP per minute |
 | `CORS_ORIGINS` | — | Browser origins allowed to call the API directly |
@@ -136,9 +144,10 @@ Interactive documentation with request examples: `/docs`.
 
 **Vercel (web app + API).** Import the repository in Vercel; `pyproject.toml` points Vercel at
 `server:app`, `public/` is served by the CDN and the API runs as a Python function under `/api`. Add
-`OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) in the project's environment variables — without a key the
-site runs in demo mode. For a public site, also set a monthly budget cap in your OpenAI account and add a
-Vercel Firewall rate-limit rule for `/api/*`: the in-app rate limit only sees one serverless instance.
+`ANTHROPIC_API_KEY` or `OPENAI_API_KEY` (and optionally the model) in the project's environment variables;
+without a key the site runs in demo mode. For a public site, also set a monthly spend limit in the
+provider's console and add a Vercel Firewall rate-limit rule for `/api/*`: the in-app rate limit only sees
+one serverless instance.
 
 **Containers.** Both images listen on `$PORT`, run as a non-root user and include a health check, so they
 deploy as they are to Cloud Run or any container platform; set `APP_API_KEY` for a public API.
@@ -156,6 +165,7 @@ deploy as they are to Cloud Run or any container platform; set `APP_API_KEY` for
 | No tests, virtual environments committed | Unit and API tests, lint, Docker smoke test in CI; clean repository |
 | Streamlit only, Cloud Run | Web app + API as one Vercel deployment; Streamlit kept for local use |
 | — | A/B variants, one-click refinements, behavioural evaluation suite |
+| OpenAI only | OpenAI or Anthropic's Claude, chosen by configuration |
 
 Every change is listed in [CHANGELOG.md](CHANGELOG.md).
 

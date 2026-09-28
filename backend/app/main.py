@@ -1,7 +1,7 @@
 """Marketing Content Generator API (FastAPI).
 
 Endpoints
-  GET  /health       liveness + which backend is active (openai:<model> or demo)
+  GET  /health       liveness + which backend is active (openai:<model>, anthropic:<model> or demo)
   GET  /options      campaign types, platforms, tones and languages for clients
   POST /generate     first draft from a brief
   POST /refine       revise the current draft with feedback
