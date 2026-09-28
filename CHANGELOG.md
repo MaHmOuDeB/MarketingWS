@@ -7,7 +7,11 @@
   keeps the Responses API. `OPENAI_API_STYLE=responses|chat` overrides the choice.
 - `/health` reports such a backend as `compat:<model>`.
 - "Thinking" models that return nothing within a short output limit get one retry with room to think.
-- README: a no-card setup with a free Google Gemini key.
+- README: a no-card setup with a free Google Gemini key (`gemini-flash-latest`, an alias that follows
+  Google's current Flash model, since dated model names are retired).
+- A 502 now names the provider's status and a plain reason (rejected key, unknown model, quota used up,
+  provider overloaded) without echoing the provider's message.
+- Answers cut off by the output limit (finish reason `length`) are retried once with more room.
 
 ## 2.2.0 — 2026-09-28 · Claude support
 

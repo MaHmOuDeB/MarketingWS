@@ -148,7 +148,7 @@ No card needed: create a key at [aistudio.google.com](https://aistudio.google.co
 ```bash
 OPENAI_API_KEY=<your Gemini key>
 OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
-OPENAI_MODEL=gemini-2.5-flash
+OPENAI_MODEL=gemini-flash-latest
 ```
 
 The free tier has daily limits shared by everyone using your deployment, and Google may use free-tier

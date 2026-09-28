@@ -241,8 +241,10 @@ def _fake_chat(outputs):
     class FakeCompletions:
         def create(self, **kwargs):
             sent.append(kwargs)
-            msg = type("M", (), {"content": outputs[len(sent) - 1]})()
-            return type("R", (), {"choices": [type("Ch", (), {"message": msg})()]})()
+            out = outputs[len(sent) - 1]
+            text, finish = out if isinstance(out, tuple) else (out, "stop")
+            msg = type("M", (), {"content": text})()
+            return type("R", (), {"choices": [type("Ch", (), {"message": msg, "finish_reason": finish})()]})()
 
     chat = type("Chat", (), {"completions": FakeCompletions()})()
     return type("C", (), {"chat": chat})(), sent
@@ -288,3 +290,11 @@ def test_model_failure_says_why_without_leaking_the_provider_message(client):
     assert r.status_code == 502 and "429" in r.json()["detail"] and "quota" in r.json()["detail"]
     assert "sk-secret" not in r.text
     main._llm = DemoLLM()
+
+
+def test_chat_retries_when_the_answer_is_cut_off(monkeypatch):
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
+    llm = OpenAILLM("k", model="gemini-flash-latest")
+    llm.client, sent = _fake_chat([("Ever wonder where your student loan", "length"), "The whole post."])
+    assert llm.complete("sys", [{"role": "user", "content": "brief"}], 180) == "The whole post."
+    assert [s["max_tokens"] for s in sent] == [180, 2048]

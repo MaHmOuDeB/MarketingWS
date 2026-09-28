@@ -88,12 +88,14 @@ class OpenAILLM:
         }
         if self._supports_temperature():
             kwargs["temperature"] = self.temperature
-        text = self.client.chat.completions.create(**kwargs).choices[0].message.content or ""
-        if not text.strip():
-            # "thinking" models (e.g. Gemini 2.5) spend part of the budget on reasoning and can
-            # return nothing within a short limit: retry once with room to think
+        choice = self.client.chat.completions.create(**kwargs).choices[0]
+        text = choice.message.content or ""
+        if not text.strip() or getattr(choice, "finish_reason", None) == "length":
+            # "thinking" models (e.g. Gemini Flash) spend part of the budget on reasoning and return
+            # nothing, or a sentence cut off mid-way, within a short limit: retry once with room to
+            # think. The service still enforces the channel's character limit afterwards.
             kwargs["max_tokens"] = max(4 * max_output_tokens, 2048)
-            text = self.client.chat.completions.create(**kwargs).choices[0].message.content or ""
+            text = self.client.chat.completions.create(**kwargs).choices[0].message.content or text
         return clean(text)
 
 
