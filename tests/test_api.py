@@ -127,6 +127,7 @@ def test_openai_backend_uses_responses_api_and_skips_temperature_for_reasoning_m
     llm = OpenAILLM.__new__(OpenAILLM)
     llm.client = type("C", (), {"responses": FakeResponses()})()
     llm.model, llm.temperature, llm.name = "gpt-4.1-mini", 0.7, "openai:gpt-4.1-mini"
+    llm.style = "responses"
     assert llm.complete("sys", [{"role": "user", "content": "hi"}], 100) == "Hello"
     assert sent["instructions"] == "sys" and sent["max_output_tokens"] == 100 and sent["temperature"] == 0.7
     llm.model = "gpt-5.6-terra"
@@ -232,3 +233,40 @@ def test_empty_environment_variables_fall_back_to_defaults(monkeypatch, client):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
     llm = from_env()
     assert llm.name == "anthropic:claude-haiku-4-5" and llm.temperature == 0.7
+
+
+def _fake_chat(outputs):
+    sent = []
+
+    class FakeCompletions:
+        def create(self, **kwargs):
+            sent.append(kwargs)
+            msg = type("M", (), {"content": outputs[len(sent) - 1]})()
+            return type("R", (), {"choices": [type("Ch", (), {"message": msg})()]})()
+
+    chat = type("Chat", (), {"completions": FakeCompletions()})()
+    return type("C", (), {"chat": chat})(), sent
+
+
+def test_compatible_providers_use_chat_completions(monkeypatch):
+    for k in ("ANTHROPIC_API_KEY", "LLM_PROVIDER", "DEMO_MODE", "OPENAI_API_STYLE"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "free-tier-key")
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
+    monkeypatch.setenv("OPENAI_MODEL", "gemini-2.5-flash")
+    llm = from_env()
+    assert llm.name == "compat:gemini-2.5-flash" and llm.style == "chat"
+    llm.client, sent = _fake_chat(['"Budget smarter."'])
+    assert llm.complete("sys", [{"role": "user", "content": "brief"}], 180) == "Budget smarter."
+    assert sent[0]["messages"][0] == {"role": "system", "content": "sys"}
+    assert sent[0]["max_tokens"] == 180 and sent[0]["temperature"] == 0.7
+    monkeypatch.setenv("OPENAI_BASE_URL", "")
+    assert from_env().style == "responses"  # OpenAI itself keeps the Responses API
+
+
+def test_chat_retries_with_room_to_think_when_output_is_empty(monkeypatch):
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://api.groq.com/openai/v1")
+    llm = OpenAILLM("k", model="some-thinking-model")
+    llm.client, sent = _fake_chat(["", "Copy after thinking."])
+    assert llm.complete("sys", [{"role": "user", "content": "brief"}], 180) == "Copy after thinking."
+    assert [s["max_tokens"] for s in sent] == [180, 2048]

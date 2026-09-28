@@ -3,7 +3,9 @@
 OpenAILLM   uses the OpenAI Responses API (the current API; Chat Completions is legacy).
             Model, base URL and temperature come from the environment, so the service keeps
             working when OpenAI retires a model: gpt-3.5-turbo, used in the thesis version, shuts
-            down on 23 Oct 2026. Any OpenAI-compatible endpoint works via OPENAI_BASE_URL.
+            down on 23 Oct 2026. Any OpenAI-compatible endpoint works via OPENAI_BASE_URL — Google
+            Gemini, Groq, OpenRouter, a local server: those speak Chat Completions, which is used
+            automatically for any base URL other than api.openai.com (OPENAI_API_STYLE overrides).
 ClaudeLLM   uses Anthropic's Messages API (Claude). Model and temperature from the environment.
 DemoLLM     deterministic, offline copy for trying the app and for tests — no key, no cost.
 
@@ -51,16 +53,22 @@ class OpenAILLM:
     def __init__(self, api_key: str, model: Optional[str] = None, temperature: Optional[float] = None):
         from openai import OpenAI  # imported lazily so demo mode needs no SDK configuration
 
-        self.client = OpenAI(api_key=api_key, timeout=45.0, max_retries=2)
+        base_url = env("OPENAI_BASE_URL") or None
+        self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=45.0, max_retries=2)
         self.model = model or env("OPENAI_MODEL", DEFAULT_MODEL)
         self.temperature = temperature if temperature is not None else env_number("OPENAI_TEMPERATURE", 0.7)
-        self.name = f"openai:{self.model}"
+        # compatible providers implement Chat Completions; only OpenAI itself has the Responses API
+        third_party = bool(base_url) and "api.openai.com" not in base_url
+        self.style = env("OPENAI_API_STYLE", "chat" if third_party else "responses").lower()
+        self.name = f"{'compat' if third_party else 'openai'}:{self.model}"
 
     def _supports_temperature(self) -> bool:
         # reasoning models (o-series, gpt-5.x) reject sampling parameters
         return not re.match(r"^(o\d|gpt-5)", self.model)
 
     def complete(self, instructions: str, messages: List[Message], max_output_tokens: int) -> str:
+        if self.style == "chat":
+            return self._chat(instructions, messages, max_output_tokens)
         kwargs = {
             "model": self.model,
             "instructions": instructions,
@@ -71,6 +79,22 @@ class OpenAILLM:
             kwargs["temperature"] = self.temperature
         response = self.client.responses.create(**kwargs)
         return clean(response.output_text)
+
+    def _chat(self, instructions: str, messages: List[Message], max_output_tokens: int) -> str:
+        kwargs = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": instructions}, *messages],
+            "max_tokens": max_output_tokens,
+        }
+        if self._supports_temperature():
+            kwargs["temperature"] = self.temperature
+        text = self.client.chat.completions.create(**kwargs).choices[0].message.content or ""
+        if not text.strip():
+            # "thinking" models (e.g. Gemini 2.5) spend part of the budget on reasoning and can
+            # return nothing within a short limit: retry once with room to think
+            kwargs["max_tokens"] = max(4 * max_output_tokens, 2048)
+            text = self.client.chat.completions.create(**kwargs).choices[0].message.content or ""
+        return clean(text)
 
 
 class ClaudeLLM:

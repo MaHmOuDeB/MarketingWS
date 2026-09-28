@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.3.0 — 2026-09-28 · Free providers (Gemini, Groq, OpenRouter)
+
+- **Chat Completions mode** for OpenAI-compatible providers: any `OPENAI_BASE_URL` other than
+  api.openai.com now uses Chat Completions (what Gemini, Groq and OpenRouter implement); OpenAI itself
+  keeps the Responses API. `OPENAI_API_STYLE=responses|chat` overrides the choice.
+- `/health` reports such a backend as `compat:<model>`.
+- "Thinking" models that return nothing within a short output limit get one retry with room to think.
+- README: a no-card setup with a free Google Gemini key.
+
 ## 2.2.0 — 2026-09-28 · Claude support
 
 - **Claude backend** (`ClaudeLLM`, Anthropic Messages API): set `ANTHROPIC_API_KEY` and the service

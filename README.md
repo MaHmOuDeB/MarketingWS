@@ -132,13 +132,27 @@ Interactive documentation with request examples: `/docs`.
 | `LLM_PROVIDER` | — | `openai`, `anthropic` or `demo`; by default, whichever key is set (OpenAI first) |
 | `OPENAI_API_KEY` | — | Enables generation with OpenAI |
 | `OPENAI_MODEL` | `gpt-4.1-mini` | Any current OpenAI model id |
-| `OPENAI_BASE_URL` | — | Any OpenAI-compatible endpoint |
+| `OPENAI_BASE_URL` | — | Any OpenAI-compatible endpoint (Gemini, Groq, OpenRouter, a local server); these use Chat Completions automatically |
+| `OPENAI_API_STYLE` | auto | `responses` or `chat`, to override the automatic choice |
 | `ANTHROPIC_API_KEY` | — | Enables generation with Claude |
 | `ANTHROPIC_MODEL` | `claude-haiku-4-5` | Any current Claude model id (`claude-sonnet-5` for higher quality) |
 | — | | Without either key the service runs in demo mode |
 | `APP_API_KEY` | — | If set, requests must send `X-API-Key` (the UI sends it server-side) |
 | `RATE_LIMIT_PER_MIN` | `20` | Requests per client IP per minute |
 | `CORS_ORIGINS` | — | Browser origins allowed to call the API directly |
+
+## Free option: Google Gemini
+
+No card needed: create a key at [aistudio.google.com](https://aistudio.google.com) (Get API key) and set
+
+```bash
+OPENAI_API_KEY=<your Gemini key>
+OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+OPENAI_MODEL=gemini-2.5-flash
+```
+
+The free tier has daily limits shared by everyone using your deployment, and Google may use free-tier
+prompts to improve its models. Groq (`https://api.groq.com/openai/v1`) works the same way.
 
 ## Deploying
 
