@@ -298,3 +298,14 @@ def test_chat_retries_when_the_answer_is_cut_off(monkeypatch):
     llm.client, sent = _fake_chat([("Ever wonder where your student loan", "length"), "The whole post."])
     assert llm.complete("sys", [{"role": "user", "content": "brief"}], 180) == "The whole post."
     assert [s["max_tokens"] for s in sent] == [180, 2048]
+
+
+def test_reasoning_effort_is_passed_only_when_set(monkeypatch):
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://api.groq.com/openai/v1")
+    llm = OpenAILLM("k", model="openai/gpt-oss-120b")
+    llm.client, sent = _fake_chat(["One.", "Two."])
+    monkeypatch.delenv("OPENAI_REASONING_EFFORT", raising=False)
+    llm.complete("sys", [{"role": "user", "content": "brief"}], 180)
+    monkeypatch.setenv("OPENAI_REASONING_EFFORT", "low")
+    llm.complete("sys", [{"role": "user", "content": "brief"}], 180)
+    assert "reasoning_effort" not in sent[0] and sent[1]["reasoning_effort"] == "low"

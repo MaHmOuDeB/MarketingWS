@@ -134,6 +134,7 @@ Interactive documentation with request examples: `/docs`.
 | `OPENAI_MODEL` | `gpt-4.1-mini` | Any current OpenAI model id |
 | `OPENAI_BASE_URL` | — | Any OpenAI-compatible endpoint (Gemini, Groq, OpenRouter, a local server); these use Chat Completions automatically |
 | `OPENAI_API_STYLE` | auto | `responses` or `chat`, to override the automatic choice |
+| `OPENAI_REASONING_EFFORT` | — | `low` / `medium` / `high` for reasoning models on compatible providers |
 | `ANTHROPIC_API_KEY` | — | Enables generation with Claude |
 | `ANTHROPIC_MODEL` | `claude-haiku-4-5` | Any current Claude model id (`claude-sonnet-5` for higher quality) |
 | — | | Without either key the service runs in demo mode |
@@ -151,8 +152,18 @@ OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
 OPENAI_MODEL=gemini-flash-latest
 ```
 
-The free tier has daily limits shared by everyone using your deployment, and Google may use free-tier
-prompts to improve its models. Groq (`https://api.groq.com/openai/v1`) works the same way.
+The free tier has daily limits shared by everyone using your deployment, Google may use free-tier
+prompts to improve its models, and free-tier requests are the first to be turned away (503) when Gemini
+is busy.
+
+**Groq** (free, no card, more dependable for a public demo; key at console.groq.com → API Keys):
+
+```bash
+OPENAI_API_KEY=<your Groq key>
+OPENAI_BASE_URL=https://api.groq.com/openai/v1
+OPENAI_MODEL=openai/gpt-oss-120b
+OPENAI_REASONING_EFFORT=low     # short "thinking" saves free quota
+```
 
 ## Deploying
 

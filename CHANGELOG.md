@@ -12,6 +12,7 @@
 - A 502 now names the provider's status and a plain reason (rejected key, unknown model, quota used up,
   provider overloaded) without echoing the provider's message.
 - Answers cut off by the output limit (finish reason `length`) are retried once with more room.
+- `OPENAI_REASONING_EFFORT` (e.g. `low` for Groq's `openai/gpt-oss-120b`); README: Groq setup.
 
 ## 2.2.0 — 2026-09-28 · Claude support
 

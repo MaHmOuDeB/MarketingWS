@@ -88,6 +88,9 @@ class OpenAILLM:
         }
         if self._supports_temperature():
             kwargs["temperature"] = self.temperature
+        effort = env("OPENAI_REASONING_EFFORT")  # e.g. "low" for Groq's gpt-oss: shorter thinking, less quota
+        if effort:
+            kwargs["reasoning_effort"] = effort
         choice = self.client.chat.completions.create(**kwargs).choices[0]
         text = choice.message.content or ""
         if not text.strip() or getattr(choice, "finish_reason", None) == "length":
